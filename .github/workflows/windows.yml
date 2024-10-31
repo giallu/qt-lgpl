@@ -42,7 +42,7 @@ jobs:
     - name: Download and extract Qt sources
       shell: bash
       run: |
-        curl -LO https://download.qt.io/archive/qt/${{ env.QT_VERSION_XY }}/${{ env.QT_VERSION }}/single/qt-everywhere-src-${{ env.QT_VERSION }}.zip
+        curl -LO https://download.qt.io/archive/qt/${{ steps.strings.QT_VERSION_XY }}/${{ env.QT_VERSION }}/single/qt-everywhere-src-${{ env.QT_VERSION }}.zip
         unzip qt-everywhere-src-${{ env.QT_VERSION }}.zip
 
     - name: Install dependencies
