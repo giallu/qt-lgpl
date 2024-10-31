@@ -30,8 +30,8 @@ jobs:
       shell: bash
       run: |
         echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
-        echo "QT_VERSION_XY=$(echo ${{ env.QT_VERSION }} | cut -d. -f1-2)" >> "$GITHUB_OUTPUT"
-        echo "QT_NVR=$(echo qt-${{ env.QT_VERSION }}-${{ env.QT_RELEASE }}-${{ env.PLATFORM }})" >> "$GITHUB_OUTPUT"
+        echo "QT_VERSION_XY=$(echo ${{ env.QT_VERSION }} | cut -d. -f1-2)" >> "$GITHUB_ENV"
+        echo "QT_NVR=$(echo qt-${{ env.QT_VERSION }}-${{ env.QT_RELEASE }}-${{ env.PLATFORM }})" >> "$GITHUB_ENV"
 
     # Needed to use GNU patch instead of Strawberry Perl patch
     # https://github.com/actions/runner-images/issues/5459#issuecomment-1532856844
@@ -42,7 +42,7 @@ jobs:
     - name: Download and extract Qt sources
       shell: bash
       run: |
-        curl -LO https://download.qt.io/archive/qt/${{ steps.strings.QT_VERSION_XY }}/${{ env.QT_VERSION }}/single/qt-everywhere-src-${{ env.QT_VERSION }}.zip
+        curl -LO https://download.qt.io/archive/qt/${{ env.QT_VERSION_XY }}/${{ env.QT_VERSION }}/single/qt-everywhere-src-${{ env.QT_VERSION }}.zip
         unzip qt-everywhere-src-${{ env.QT_VERSION }}.zip
 
     - name: Install dependencies
