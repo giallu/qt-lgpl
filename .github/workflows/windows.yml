@@ -29,12 +29,9 @@ jobs:
       with:
         arch: x64
 
-    - name: Set reusable strings
-      # Turn repeated input strings (such as the build output directory) into step outputs. These step outputs can be used throughout the workflow file.
-      id: strings
+    - name: Set version strings
       shell: bash
       run: |
-        echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
         echo "QT_VERSION_XY=$(echo ${{ env.QT_VERSION }} | cut -d. -f1-2)" >> "$GITHUB_ENV"
         echo "QT_NVR=$(echo qt-${{ env.QT_VERSION }}-${{ env.QT_RELEASE }}-${{ env.PLATFORM }})" >> "$GITHUB_ENV"
 
@@ -57,26 +54,47 @@ jobs:
       shell: cmd
       run: >
         qt-everywhere-src-${{ env.QT_VERSION }}\configure.bat
-        -verbose
+        -cmake-generator Ninja
         -openssl-linked
-        -nomake examples
-        -nomake tests
+        -make libs
+        -make tools
         -release
         -no-use-gold-linker
         -qt-libjpeg
         -qt-libpng
         -qt-zlib
         -opengl dynamic
-        -submodules qtbase,qtactiveqt
+        -submodules qtbase,qtactiveqt,qtimageformats,qtdeclarative
         -prefix C:\Qt\
         --
-        -GNinja
         -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
         -DOPENSSL_ROOT_DIR="C:/vcpkg/installed/x64-windows-static"
 
-    - name: Build and install Qt
+    - name: Compile and install
       shell: cmd
       run: |
          cmake --build . --parallel %NUMBER_OF_PROCESSORS%
          cmake --install .
 
+    - name: Create zip
+      shell: cmd
+      run: |
+        "C:\Program Files\7-Zip\7z.exe" a ${{ env.QT_NVR }}.zip C:\Qt
+
+    - name: Create artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ env.QT_NVR }}
+        path: ${{ env.QT_NVR }}.zip
+        retention-days: 90
+        if-no-files-found: warn
+
+    - name: Create release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ env.QT_NVR }}
+        target_commitish: ${{ github.sha }}
+        files: |
+          ${{ env.QT_NVR}}.zip
+          config.opt
+          config.summary
