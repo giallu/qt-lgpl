@@ -62,12 +62,10 @@ jobs:
         -qt-libpng
         -qt-zlib
         -opengl dynamic
-        -submodules
-         qtbase,
-         qtactiveqt
-
+        -submodules qtbase,qtactiveqt
         -prefix C:\Qt\
         --
+        -GNinja
         -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
         -DOPENSSL_ROOT_DIR="C:/vcpkg/installed/x64-windows-static"
 
