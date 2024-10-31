@@ -73,7 +73,7 @@ jobs:
     - name: Compile and install
       shell: cmd
       run: |
-         cmake --build . --parallel %NUMBER_OF_PROCESSORS%
+         cmake --build . --parallel
          cmake --install .
 
     - name: Create zip
@@ -87,7 +87,7 @@ jobs:
         name: ${{ env.QT_NVR }}
         path: ${{ env.QT_NVR }}.zip
         retention-days: 90
-        if-no-files-found: warn
+        if-no-files-found: error
 
     - name: Create release
       uses: softprops/action-gh-release@v2
