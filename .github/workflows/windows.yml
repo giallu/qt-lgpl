@@ -62,28 +62,10 @@ jobs:
         -qt-libpng
         -qt-zlib
         -opengl dynamic
-        -mp
-        -skip qt3d
-        -skip qtcanvas3d
-        -skip qtcharts
-        -skip qtconnectivity
-        -skip qtdatavis3d
-        -skip qtdoc
-        -skip qtgamepad
-        -skip qtlocation
-        -skip qtmultimedia
-        -skip qtpurchasing
-        -skip qtscript
-        -skip qtscxml
-        -skip qtsensors
-        -skip qtserialbus
-        -skip qtserialport
-        -skip qtspeech
-        -skip qtvirtualkeyboard
-        -skip qtwayland
-        -skip qtwebengine
-        -skip qtwebsockets
-        -skip remoteobjects
+        -submodules
+         qtbase,
+         qtactiveqt
+
         -prefix C:\Qt\
         --
         -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
