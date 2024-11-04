@@ -11,8 +11,6 @@ env:
   
   QT_VERSION: 6.8.0
   QT_RELEASE: 1
-  PLATFORM: win2019
-
 
 jobs:
   build:
@@ -25,12 +23,12 @@ jobs:
           - os: windows-2019
             suffix: win2019
             triplet: x64-windows-static
-            prefix: C:/Qt/
+            prefix: C:/Qt
   
           - os: ubuntu-22.04
             suffix: ubuntu2204
-            triplet: x64-linux-static
-            prefix: /Qt/
+            triplet: x64-linux
+            prefix: /Qt
 
 
     runs-on: ${{ matrix.os }} 
@@ -47,7 +45,7 @@ jobs:
       shell: bash
       run: |
         echo "QT_VERSION_XY=$(echo ${{ env.QT_VERSION }} | cut -d. -f1-2)" >> "$GITHUB_ENV"
-        echo "QT_NVR=$(echo qt-${{ env.QT_VERSION }}-${{ env.QT_RELEASE }}-${{ env.PLATFORM }})" >> "$GITHUB_ENV"
+        echo "QT_NVR=$(echo qt-${{ env.QT_VERSION }}-${{ env.QT_RELEASE }}-${{ matrix.suffix }})" >> "$GITHUB_ENV"
 
     # Needed to use GNU patch instead of Strawberry Perl patch
     # https://github.com/actions/runner-images/issues/5459#issuecomment-1532856844
@@ -93,7 +91,7 @@ jobs:
     - name: Create zip
       shell: cmd
       run: |
-        "C:\Program Files\7-Zip\7z.exe" a ${{ env.QT_NVR }}.zip C:\Qt
+        "C:\Program Files\7-Zip\7z.exe" a ${{ env.QT_NVR }}.zip ${{ matrix.prefix }}
 
     - name: Create artifact
       uses: actions/upload-artifact@v4
