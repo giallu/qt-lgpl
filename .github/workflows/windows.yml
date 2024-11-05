@@ -67,7 +67,7 @@ jobs:
       env: 
         CONFIGURE_BIN: ${{ runner.os == 'Windows' && "configure.bat" || "configure" }}
       run: >
-        qt-everywhere-src-${{ env.QT_VERSION }}\${{ env.CONFIGURE_BIN }}
+        qt-everywhere-src-${{ env.QT_VERSION }}\configure${{ runner.os == 'Windows' && '.bat' }}
         -cmake-generator Ninja
         -openssl-linked
         -make libs
