@@ -76,11 +76,11 @@ jobs:
         -qt-libpng
         -qt-zlib
         -opengl dynamic
-        -submodules qtbase,qtactiveqt,qtimageformats,qtdeclarative
+        -submodules qtbase,qtimageformats,qtdeclarative${{ runner.os == 'Windows' && 'qtactiveqt' || '' }}
         -prefix ${{ matrix.prefix }}
         --
         -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_INSTALLATION_ROOT }}/scripts/buildsystems/vcpkg.cmake
-        -DOPENSSL_ROOT_DIR="${{ env.VCPKG_INSTALLATION_ROOT }}/installed/x64-windows-static"
+        -DOPENSSL_ROOT_DIR="${{ env.VCPKG_INSTALLATION_ROOT }}/installed/${{ matrix.triplet }}"
 
     - name: Compile and install
       shell: bash
@@ -88,17 +88,19 @@ jobs:
          cmake --build . --parallel
          cmake --install .
 
-    - name: Create zip
+    - name: Create archive
       shell: bash
+      env:
+        ARCHIVE: ${{ runner.os == 'Windows' && '"C:\Program Files\7-Zip\7z.exe" a' || 'tar cjf'
       run: |
-        "C:\Program Files\7-Zip\7z.exe" a ${{ env.QT_NVR }}.zip ${{ matrix.prefix }}
+        ${{e nv.ARCHIVE }} ${{ env.QT_NVR }}.${{ matrix.archive }} ${{ matrix.prefix }}
 
     - name: Create artifact
       uses: actions/upload-artifact@v4
       with:
         name: ${{ env.QT_NVR }}
-        path: ${{ env.QT_NVR }}.zip
-        retention-days: 90
+        path: ${{ env.QT_NVR }}.${{ matrix.archive }}
+        retention-days: 7
         if-no-files-found: error
 
     - name: Create release
@@ -107,6 +109,6 @@ jobs:
         tag_name: ${{ env.QT_NVR }}
         target_commitish: ${{ github.sha }}
         files: |
-          ${{ env.QT_NVR}}.zip
+          ${{ env.QT_NVR}}.${{ matrix.archive }}
           config.opt
           config.summary
