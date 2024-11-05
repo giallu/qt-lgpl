@@ -24,11 +24,13 @@ jobs:
             suffix: win2019
             triplet: x64-windows-static
             prefix: C:/Qt
+            archive: zip
   
           - os: ubuntu-22.04
             suffix: ubuntu2204
             triplet: x64-linux
             prefix: /Qt
+            archive: tar.xz
 
 
     runs-on: ${{ matrix.os }} 
@@ -63,9 +65,9 @@ jobs:
       run: vcpkg install openssl --triplet=${{ matrix.triplet }}
 
     - name: Configure build
-      shell: cmd
+      shell: bash
       run: >
-        qt-everywhere-src-${{ env.QT_VERSION }}\configure.bat
+        qt-everywhere-src-${{ env.QT_VERSION }}\configure${{runner.os == "Windows" && ".bat"}}
         -cmake-generator Ninja
         -openssl-linked
         -make libs
@@ -83,13 +85,13 @@ jobs:
         -DOPENSSL_ROOT_DIR="${{ env.VCPKG_INSTALLATION_ROOT }}/installed/x64-windows-static"
 
     - name: Compile and install
-      shell: cmd
+      shell: bash
       run: |
          cmake --build . --parallel
          cmake --install .
 
     - name: Create zip
-      shell: cmd
+      shell: bash
       run: |
         "C:\Program Files\7-Zip\7z.exe" a ${{ env.QT_NVR }}.zip ${{ matrix.prefix }}
 
