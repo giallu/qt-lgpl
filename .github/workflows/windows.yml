@@ -1,6 +1,4 @@
-# This starter workflow is for a CMake project running on a single platform. There is a different starter workflow if you need cross-platform coverage.
-# See: https://github.com/actions/starter-workflows/blob/main/ci/cmake-multi-platform.yml
-name: Windows build
+name: Build Qt
 
 on:
   workflow_dispatch:
@@ -66,8 +64,10 @@ jobs:
 
     - name: Configure build
       shell: bash
+      env: 
+        CONFIGURE_BIN: ${{ runner.os == 'Windows' && "configure.bat" || "configure" }}
       run: >
-        qt-everywhere-src-${{ env.QT_VERSION }}\configure${{runner.os == "Windows" && ".bat"}}
+        qt-everywhere-src-${{ env.QT_VERSION }}\${{ env.CONFIGURE_BIN }}
         -cmake-generator Ninja
         -openssl-linked
         -make libs
