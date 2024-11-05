@@ -54,7 +54,7 @@ jobs:
       run: echo "C:\Program Files\Git\usr\bin" >> $env:GITHUB_PATH
 
     - name: ensure Ninja is installed
-      if: runner.os == "Linux"
+      if: runner.os == 'Linux'
       run: sudo apt update && sudo apt install -y ninja-build
 
     - name: Download and extract Qt sources
