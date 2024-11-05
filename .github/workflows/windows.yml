@@ -91,9 +91,9 @@ jobs:
     - name: Create archive
       shell: bash
       env:
-        ARCHIVE: ${{ runner.os == 'Windows' && '"C:\Program Files\7-Zip\7z.exe" a' || 'tar cjf' }}
+        ARCHIVE_CMD: ${{ runner.os == 'Windows' && '"C:\Program Files\7-Zip\7z.exe" a' || 'tar cjf' }}
       run: |
-        ${{e nv.ARCHIVE }} ${{ env.QT_NVR }}.${{ matrix.archive }} ${{ matrix.prefix }}
+        ${{ env.ARCHIVE_CMD }} ${{ env.QT_NVR }}.${{ matrix.archive }} ${{ matrix.prefix }}
 
     - name: Create artifact
       uses: actions/upload-artifact@v4
