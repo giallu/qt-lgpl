@@ -63,7 +63,7 @@ jobs:
       run: vcpkg install openssl --triplet=${{ matrix.triplet }}
 
     - name: Configure build
-      shell: bash
+      shell: bash -leo pipefail {0}
       run: >
         qt-everywhere-src-${{ env.QT_VERSION }}/configure${{ runner.os == 'Windows' && '.bat' || '' }}
         -cmake-generator Ninja
@@ -76,7 +76,7 @@ jobs:
         -qt-libpng
         -qt-zlib
         -opengl dynamic
-        -submodules qtbase,qtimageformats,qtdeclarative${{ runner.os == 'Windows' && 'qtactiveqt' || '' }}
+        -submodules qtbase,qtimageformats,qtdeclarative${{ runner.os == 'Windows' && ',qtactiveqt' || '' }}
         -prefix ${{ matrix.prefix }}
         --
         -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_INSTALLATION_ROOT }}/scripts/buildsystems/vcpkg.cmake
@@ -109,6 +109,6 @@ jobs:
         tag_name: ${{ env.QT_NVR }}
         target_commitish: ${{ github.sha }}
         files: |
-          ${{ env.QT_NVR}}.${{ matrix.archive }}
+          ${{ env.QT_NVR }}.${{ matrix.archive }}
           config.opt
           config.summary
