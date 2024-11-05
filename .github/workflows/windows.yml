@@ -65,7 +65,7 @@ jobs:
     - name: Configure build
       shell: bash
       env: 
-        CONFIGURE_BIN: ${{ runner.os == 'Windows' && "configure.bat" || "configure" }}
+        CONFIGURE_BIN: ${{ runner.os == 'Windows' && 'configure.bat' || 'configure' }}
       run: >
         qt-everywhere-src-${{ env.QT_VERSION }}\configure${{ runner.os == 'Windows' && '.bat' }}
         -cmake-generator Ninja
