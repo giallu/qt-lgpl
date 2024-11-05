@@ -60,10 +60,13 @@ jobs:
         tar xf qt-everywhere-src-${{ env.QT_VERSION }}.tar.xz
 
     - name: Install dependencies
-      run: vcpkg install openssl --triplet=${{ matrix.triplet }}
+      shell: bash
+      run: |
+        vcpkg install openssl --triplet=${{ matrix.triplet }}
+        echo ${{ runner.os != 'Windows' && 'VCPKG_INSTALLATION_ROOT=/usr/local/share/vcpkg' || '' }} >> $GITHUB_ENV
+      
 
     - name: Configure build
-      shell: bash -leo pipefail {0}
       run: >
         qt-everywhere-src-${{ env.QT_VERSION }}/configure${{ runner.os == 'Windows' && '.bat' || '' }}
         -cmake-generator Ninja
