@@ -92,7 +92,7 @@ jobs:
       shell: bash
       run: |
         vcpkg install openssl --triplet=${{ matrix.triplet }}
-        echo ${{ runner.os != 'Windows' && 'VCPKG_INSTALLATION_ROOT=/usr/local/share/vcpkg' || '' }} >> $GITHUB_ENV
+        echo ${{ runner.os == 'Windows' && 'VCPKG_INSTALLATION_ROOT=C:/vcpkg' || 'VCPKG_INSTALLATION_ROOT=/usr/local/share/vcpkg' }} >> $GITHUB_ENV
       
 
     - name: Configure build
