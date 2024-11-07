@@ -107,7 +107,7 @@ jobs:
         -qt-libjpeg
         -qt-libpng
         -qt-zlib
-        {{ runner.os == 'Windows' && '
+        ${{ runner.os == 'Windows' && '
         -opengl dynamic
         -submodules qtbase,qtimageformats,qtdeclarative,qtactiveqt
         ' || '
