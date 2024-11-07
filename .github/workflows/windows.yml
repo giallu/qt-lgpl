@@ -99,6 +99,7 @@ jobs:
       run: >
         qt-everywhere-src-${{ env.QT_VERSION }}/configure${{ runner.os == 'Windows' && '.bat' || '' }}
         -cmake-generator Ninja
+        -verbose
         -openssl-linked
         -make libs
         -make tools
