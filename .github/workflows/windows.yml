@@ -53,9 +53,34 @@ jobs:
       if: runner.os == 'Windows'
       run: echo "C:\Program Files\Git\usr\bin" >> $env:GITHUB_PATH
 
-    - name: ensure Ninja is installed
+    - name: Install Linux dependencies
       if: runner.os == 'Linux'
-      run: sudo apt update && sudo apt install -y ninja-build
+      run: |
+        sudo apt update && sudo apt install -y ninja-build libfontconfig1-dev \
+        libfreetype-dev \
+        libx11-dev \
+        libx11-xcb-dev \
+        libxcb-cursor-dev \
+        libxcb-glx0-dev \
+        libxcb-icccm4-dev \
+        libxcb-image0-dev \
+        libxcb-keysyms1-dev \
+        libxcb-randr0-dev \
+        libxcb-render-util0-dev \
+        libxcb-shape0-dev \
+        libxcb-shm0-dev \
+        libxcb-sync-dev \
+        libxcb-util-dev \
+        libxcb-xfixes0-dev \
+        libxcb-xinerama0-dev \
+        libxcb-xkb-dev \
+        libxcb1-dev \
+        libxext-dev \
+        libxfixes-dev \
+        libxi-dev \
+        libxkbcommon-dev \
+        libxkbcommon-x11-dev \
+        libxrender-dev
 
     - name: Download and extract Qt sources
       shell: bash
@@ -82,8 +107,12 @@ jobs:
         -qt-libjpeg
         -qt-libpng
         -qt-zlib
+        {{ runner.os == 'Windows' && '
         -opengl dynamic
-        -submodules qtbase,qtimageformats,qtdeclarative${{ runner.os == 'Windows' && ',qtactiveqt' || '' }}
+        -submodules qtbase,qtimageformats,qtdeclarative,qtactiveqt
+        ' || '
+        -submodules qtbase,qtimageformats,qtdeclarative
+        ' }}
         -prefix ${{ matrix.prefix }}
         --
         -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_INSTALLATION_ROOT }}/scripts/buildsystems/vcpkg.cmake
