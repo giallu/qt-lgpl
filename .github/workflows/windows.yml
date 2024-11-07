@@ -117,7 +117,7 @@ jobs:
         ' }}
         -prefix ${{ matrix.prefix }}
         --
-        -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_INSTALLATION_ROOT }}/scripts/buildsystems/vcpkg.cmake
+        -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_INSTALLATION_ROOT }}/scripts/buildsystems/vcpkg.cmake"
         -DOPENSSL_ROOT_DIR="${{ env.VCPKG_INSTALLATION_ROOT }}/installed/${{ matrix.triplet }}"
 
     - name: Compile and install
