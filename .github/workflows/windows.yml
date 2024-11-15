@@ -83,6 +83,13 @@ jobs:
         libxkbcommon-x11-dev \
         libxrender-dev
 
+    - name: Clean up disk space
+      if: runner.os == 'Linux'
+      run: |
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /opt/ghc
+
     - name: Download and extract Qt sources
       shell: bash
       run: |
