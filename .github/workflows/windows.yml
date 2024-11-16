@@ -1,6 +1,4 @@
-# This starter workflow is for a CMake project running on a single platform. There is a different starter workflow if you need cross-platform coverage.
-# See: https://github.com/actions/starter-workflows/blob/main/ci/cmake-multi-platform.yml
-name: Windows build
+name: Build Qt
 
 on:
   workflow_dispatch:
@@ -10,21 +8,35 @@ env:
   BUILD_TYPE: Release
   
   QT_VERSION: 6.8.0
-  QT_RELEASE: 1
-  PLATFORM: win2019
-
+  QT_RELEASE: 2
 
 jobs:
   build:
-    # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
-    # You can convert this to a matrix build if you need cross-platform coverage.
-    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    runs-on: windows-2019
+    # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations. Consider changing this to true when your workflow is stable.
+    strategy:
+      fail-fast: false
     
+      matrix:
+        include:
+          - os: windows-2019
+            suffix: win2019
+            triplet: x64-windows-static
+            prefix: C:/Qt
+            archive: zip
+  
+          - os: ubuntu-22.04
+            suffix: ubuntu2204
+            triplet: x64-linux
+            prefix: ~/Qt
+            archive: tar.xz
+
+
+    runs-on: ${{ matrix.os }} 
     steps:
     - uses: actions/checkout@v4
 
     - name: Set up Visual Studio shell
+      if: runner.os == 'Windows'
       uses: egor-tensin/vs-shell@v2
       with:
         arch: x64
@@ -33,7 +45,7 @@ jobs:
       shell: bash
       run: |
         echo "QT_VERSION_XY=$(echo ${{ env.QT_VERSION }} | cut -d. -f1-2)" >> "$GITHUB_ENV"
-        echo "QT_NVR=$(echo qt-${{ env.QT_VERSION }}-${{ env.QT_RELEASE }}-${{ env.PLATFORM }})" >> "$GITHUB_ENV"
+        echo "QT_NVR=$(echo qt-${{ env.QT_VERSION }}-${{ env.QT_RELEASE }}-${{ matrix.suffix }})" >> "$GITHUB_ENV"
 
     # Needed to use GNU patch instead of Strawberry Perl patch
     # https://github.com/actions/runner-images/issues/5459#issuecomment-1532856844
@@ -41,20 +53,61 @@ jobs:
       if: runner.os == 'Windows'
       run: echo "C:\Program Files\Git\usr\bin" >> $env:GITHUB_PATH
 
+    - name: Install Linux dependencies
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt update && sudo apt install -y ninja-build libfontconfig1-dev \
+        libfreetype-dev \
+        libgl1-mesa-dev \
+        libx11-dev \
+        libx11-xcb-dev \
+        libxcb-cursor-dev \
+        libxcb-glx0-dev \
+        libxcb-icccm4-dev \
+        libxcb-image0-dev \
+        libxcb-keysyms1-dev \
+        libxcb-randr0-dev \
+        libxcb-render-util0-dev \
+        libxcb-shape0-dev \
+        libxcb-shm0-dev \
+        libxcb-sync-dev \
+        libxcb-util-dev \
+        libxcb-xfixes0-dev \
+        libxcb-xinerama0-dev \
+        libxcb-xkb-dev \
+        libxcb1-dev \
+        libxext-dev \
+        libxfixes-dev \
+        libxi-dev \
+        libxkbcommon-dev \
+        libxkbcommon-x11-dev \
+        libxrender-dev
+
+    - name: Clean up disk space
+      if: runner.os == 'Linux'
+      run: |
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /opt/ghc
+
     - name: Download and extract Qt sources
       shell: bash
       run: |
-        curl -LO https://download.qt.io/archive/qt/${{ env.QT_VERSION_XY }}/${{ env.QT_VERSION }}/single/qt-everywhere-src-${{ env.QT_VERSION }}.zip
-        unzip qt-everywhere-src-${{ env.QT_VERSION }}.zip
+        curl -LO https://download.qt.io/archive/qt/${{ env.QT_VERSION_XY }}/${{ env.QT_VERSION }}/single/qt-everywhere-src-${{ env.QT_VERSION }}.tar.xz
+        tar xf qt-everywhere-src-${{ env.QT_VERSION }}.tar.xz
 
     - name: Install dependencies
-      run: vcpkg install openssl --triplet=x64-windows-static
+      shell: bash
+      run: |
+        vcpkg install openssl --triplet=${{ matrix.triplet }}
+        echo ${{ runner.os == 'Windows' && 'VCPKG_INSTALLATION_ROOT=C:/vcpkg' || 'VCPKG_INSTALLATION_ROOT=/usr/local/share/vcpkg' }} >> $GITHUB_ENV
+      
 
     - name: Configure build
-      shell: cmd
       run: >
-        qt-everywhere-src-${{ env.QT_VERSION }}\configure.bat
+        qt-everywhere-src-${{ env.QT_VERSION }}/configure${{ runner.os == 'Windows' && '.bat' || '' }}
         -cmake-generator Ninja
+        -verbose
         -openssl-linked
         -make libs
         -make tools
@@ -63,30 +116,36 @@ jobs:
         -qt-libjpeg
         -qt-libpng
         -qt-zlib
+        ${{ runner.os == 'Windows' && '
         -opengl dynamic
-        -submodules qtbase,qtactiveqt,qtimageformats,qtdeclarative
-        -prefix C:\Qt\
+        -submodules qtbase,qtimageformats,qtdeclarative,qtactiveqt
+        ' || '
+        -submodules qtbase,qtimageformats,qtdeclarative
+        ' }}
+        -prefix ${{ matrix.prefix }}
         --
-        -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
-        -DOPENSSL_ROOT_DIR="C:/vcpkg/installed/x64-windows-static"
+        -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_INSTALLATION_ROOT }}/scripts/buildsystems/vcpkg.cmake"
+        -DOPENSSL_ROOT_DIR="${{ env.VCPKG_INSTALLATION_ROOT }}/installed/${{ matrix.triplet }}"
 
     - name: Compile and install
-      shell: cmd
+      shell: bash
       run: |
          cmake --build . --parallel
          cmake --install .
 
-    - name: Create zip
-      shell: cmd
+    - name: Create archive
+      shell: bash
+      env:
+        ARCHIVE_CMD: ${{ runner.os == 'Windows' && '"C:\Program Files\7-Zip\7z.exe" a' || 'tar cjf' }}
       run: |
-        "C:\Program Files\7-Zip\7z.exe" a ${{ env.QT_NVR }}.zip C:\Qt
+        ${{ env.ARCHIVE_CMD }} ${{ env.QT_NVR }}.${{ matrix.archive }} ${{ matrix.prefix }}
 
     - name: Create artifact
       uses: actions/upload-artifact@v4
       with:
         name: ${{ env.QT_NVR }}
-        path: ${{ env.QT_NVR }}.zip
-        retention-days: 90
+        path: ${{ env.QT_NVR }}.${{ matrix.archive }}
+        retention-days: 7
         if-no-files-found: error
 
     - name: Create release
@@ -95,6 +154,6 @@ jobs:
         tag_name: ${{ env.QT_NVR }}
         target_commitish: ${{ github.sha }}
         files: |
-          ${{ env.QT_NVR}}.zip
+          ${{ env.QT_NVR }}.${{ matrix.archive }}
           config.opt
           config.summary
