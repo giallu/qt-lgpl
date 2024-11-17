@@ -83,6 +83,8 @@ jobs:
         libxkbcommon-x11-dev \
         libxrender-dev
 
+    # Linux builds failed due to low disk space, apply sugegstion from
+    # https://github.com/actions/runner-images/issues/10699#issuecomment-2402475892
     - name: Clean up disk space
       if: runner.os == 'Linux'
       run: |
@@ -102,7 +104,6 @@ jobs:
         vcpkg install openssl --triplet=${{ matrix.triplet }}
         echo ${{ runner.os == 'Windows' && 'VCPKG_INSTALLATION_ROOT=C:/vcpkg' || 'VCPKG_INSTALLATION_ROOT=/usr/local/share/vcpkg' }} >> $GITHUB_ENV
       
-
     - name: Configure build
       run: >
         qt-everywhere-src-${{ env.QT_VERSION }}/configure${{ runner.os == 'Windows' && '.bat' || '' }}
