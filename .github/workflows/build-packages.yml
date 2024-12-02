@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
 
 env:  
-  QT_VERSION: 6.8.0
-  QT_RELEASE: 2
+  QT_VERSION: 6.8.1
+  QT_RELEASE: 1
 
 jobs:
   build:
@@ -102,6 +102,7 @@ jobs:
         echo ${{ runner.os == 'Windows' && 'VCPKG_INSTALLATION_ROOT=C:/vcpkg' || 'VCPKG_INSTALLATION_ROOT=/usr/local/share/vcpkg' }} >> $GITHUB_ENV
       
     - name: Configure build
+      shell: bash
       run: >
         qt-everywhere-src-${{ env.QT_VERSION }}/configure${{ runner.os == 'Windows' && '.bat' || '' }}
         -cmake-generator Ninja
