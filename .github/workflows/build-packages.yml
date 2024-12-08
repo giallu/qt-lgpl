@@ -5,7 +5,7 @@ on:
 
 env:  
   QT_VERSION: 6.8.1
-  QT_RELEASE: 1
+  QT_RELEASE: 2
 
 jobs:
   build:
@@ -99,32 +99,34 @@ jobs:
       shell: bash
       run: |
         vcpkg install openssl --triplet=${{ matrix.triplet }}
-        echo ${{ runner.os == 'Windows' && 'VCPKG_INSTALLATION_ROOT=C:/vcpkg' || 'VCPKG_INSTALLATION_ROOT=/usr/local/share/vcpkg' }} >> $GITHUB_ENV
       
     - name: Configure build
       shell: bash
       run: >
         qt-everywhere-src-${{ env.QT_VERSION }}/configure${{ runner.os == 'Windows' && '.bat' || '' }}
         -cmake-generator Ninja
-        -verbose
         -openssl-linked
-        -make libs
-        -make tools
         -release
         -no-use-gold-linker
         -qt-libjpeg
         -qt-libpng
         -qt-zlib
+        -qt-pcre
+        -qt-harfbuzz
+        -qt-doubleconversion
+        -nomake examples
+        -nomake tests
+        -make tools
         ${{ runner.os == 'Windows' && '
         -opengl dynamic
-        -submodules qtbase,qtimageformats,qtdeclarative,qtactiveqt
+        -submodules qtbase,qtimageformats,qtdeclarative,qtsvg,qtremoteobjects,qtactiveqt
         ' || '
-        -submodules qtbase,qtimageformats,qtdeclarative
+        -submodules qtbase,qtimageformats,qtdeclarative,qtremoteobjects,qtsvg
         ' }}
         -prefix ${{ matrix.prefix }}
         --
-        -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_INSTALLATION_ROOT }}/scripts/buildsystems/vcpkg.cmake"
-        -DOPENSSL_ROOT_DIR="${{ env.VCPKG_INSTALLATION_ROOT }}/installed/${{ matrix.triplet }}"
+        -DCMAKE_TOOLCHAIN_FILE="${VCPKG_INSTALLATION_ROOT}/scripts/buildsystems/vcpkg.cmake"
+        -Wno-dev
 
     - name: Compile and install
       shell: bash
