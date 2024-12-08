@@ -115,9 +115,9 @@ jobs:
         -nomake tests
         ${{ runner.os == 'Windows' && '
         -opengl dynamic
-        -submodules qtbase,qtimageformats,qtdeclarative,qttools,qtsvg,qtactiveqt
+        -submodules qtbase,qtimageformats,qtdeclarative,qttools,qtactiveqt
         ' || '
-        -submodules qtbase,qtimageformats,qtdeclarative,qttools,qtsvg
+        -submodules qtbase,qtimageformats,qtdeclarative,qttools
         ' }}
         -prefix ${{ matrix.prefix }}
         --
