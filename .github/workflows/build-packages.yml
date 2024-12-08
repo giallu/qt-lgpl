@@ -108,6 +108,7 @@ jobs:
         -openssl-linked
         -release
         -no-use-gold-linker
+        -make tools
         -qt-libjpeg
         -qt-libpng
         -qt-zlib
@@ -115,9 +116,9 @@ jobs:
         -nomake tests
         ${{ runner.os == 'Windows' && '
         -opengl dynamic
-        -submodules qtbase,qtimageformats,qtdeclarative,qttools,qtactiveqt
+        -submodules qtbase,qtimageformats,qtdeclarative,qtactiveqt
         ' || '
-        -submodules qtbase,qtimageformats,qtdeclarative,qttools
+        -submodules qtbase,qtimageformats,qtdeclarative
         ' }}
         -prefix ${{ matrix.prefix }}
         --
