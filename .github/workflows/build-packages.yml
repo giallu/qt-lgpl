@@ -111,16 +111,13 @@ jobs:
         -qt-libjpeg
         -qt-libpng
         -qt-zlib
-        -qt-pcre
-        -qt-harfbuzz
-        -qt-doubleconversion
         -nomake examples
         -nomake tests
         ${{ runner.os == 'Windows' && '
         -opengl dynamic
-        -submodules qtbase,qtimageformats,qtdeclarative,qttools,qttools,qtsvg,qtactiveqt
+        -submodules qtbase,qtimageformats,qtdeclarative,qttools,qtsvg, qtactiveqt
         ' || '
-        -submodules qtbase,qtimageformats,qtdeclarative,qttools,qttools,qtsvg
+        -submodules qtbase,qtimageformats,qtdeclarative,qttools,qtsvg
         ' }}
         -prefix ${{ matrix.prefix }}
         --
