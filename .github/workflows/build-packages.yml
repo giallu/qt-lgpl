@@ -122,6 +122,7 @@ jobs:
         -prefix ${{ matrix.prefix }}
         --
         -DCMAKE_TOOLCHAIN_FILE="${VCPKG_INSTALLATION_ROOT}/scripts/buildsystems/vcpkg.cmake"
+        -Wno-dev
 
     - name: Compile and install
       shell: bash
