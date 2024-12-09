@@ -1,0 +1,54 @@
+name: 'Install Qt'
+description: 'Install Qt libraries'
+
+inputs:
+  qt-version:
+    description: 'Qt version to install'
+    required: true
+    default: '6.8.1-3'
+
+  os:
+    description: 'Operating system, accepts standard GitHub Actions runner names'
+    required: true
+    default: 'ubuntu-22.04'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Show runner OS
+      shell: bash
+      run: |
+        echo "Running on: ${{ runner.name }} - ${{ runner.os }} - ${{ runner.arch }}"
+
+    - name: Determine base name
+      shell: bash
+      run: |
+        os=${{ inputs.os }}
+        echo "base-name=qt-${{ inputs.qt-version }}-${os//[.-]/}" >> $GITHUB_ENV
+
+    - name: Download Qt from releases 
+      uses: robinraju/release-downloader@v1
+      with:
+        repository: "giallu/qt-lgpl"
+        tag: ${{ env.base-name }}
+        fileName: ${{ env.base-name }}.${{ runner.os == 'Windows' && 'zip' || 'tar.xz' }}
+
+    - name: Extract Qt and Add Qt to $PATH (Windows)
+      shell: pwsh
+      if: runner.os == 'Windows'
+      run: |
+        Remove-Item -Recurse C:\Qt -ErrorAction silentlycontinue
+        Remove-Item -Recurse C:\Qt-${{ inputs.qt-version }} -ErrorAction silentlycontinue
+        7z x ${{ env.base-name }}.zip -oC:\
+        mv C:\${{ env.base-name }} C:\Qt-${{ inputs.qt-version }}
+        Add-Content $env:GITHUB_PATH "C:\Qt-${{ inputs.qt-version }}\bin"
+
+    - name: Extract Qt and Add Qt to $PATH (Other OS)
+      shell: bash
+      if: runner.os != 'Windows'
+      run: |
+        echo "Extracting Qt to ${GITHUB_WORKSPACE}/Qt-${{ inputs.qt-version }}"
+        rm -rf ${GITHUB_WORKSPACE}/Qt-${{ inputs.qt-version }}
+        mkdir ${GITHUB_WORKSPACE}/Qt-${{ inputs.qt-version }}
+        tar xf ${{ env.base-name }}.tar.xz -C${GITHUB_WORKSPACE}/Qt-${{ inputs.qt-version }} --strip-components 1
+        echo "${GITHUB_WORKSPACE}/Qt-${{ inputs.qt-version }}/bin" >> "$GITHUB_PATH"
