@@ -5,7 +5,7 @@ on:
 
 env:  
   QT_VERSION: 6.8.1
-  QT_RELEASE: 2
+  QT_RELEASE: 3
 
 jobs:
   build:
@@ -16,17 +16,12 @@ jobs:
       matrix:
         include:
           - os: windows-2019
-            suffix: win2019
             triplet: x64-windows-static
-            prefix: C:/Qt
             archive: zip
   
           - os: ubuntu-22.04
-            suffix: ubuntu2204
             triplet: x64-linux
-            prefix: ~/Qt
             archive: tar.xz
-
 
     runs-on: ${{ matrix.os }} 
     steps:
@@ -41,8 +36,9 @@ jobs:
     - name: Set version strings
       shell: bash
       run: |
+        os_name=${{ matrix.os }}
         echo "QT_VERSION_XY=$(echo ${{ env.QT_VERSION }} | cut -d. -f1-2)" >> "$GITHUB_ENV"
-        echo "QT_NVR=$(echo qt-${{ env.QT_VERSION }}-${{ env.QT_RELEASE }}-${{ matrix.suffix }})" >> "$GITHUB_ENV"
+        echo "QT_NVR=$(echo qt-${{ env.QT_VERSION }}-${{ env.QT_RELEASE }}-${os_name//[.-]/})" >> "$GITHUB_ENV"
 
     # Needed to use GNU patch instead of Strawberry Perl patch
     # https://github.com/actions/runner-images/issues/5459#issuecomment-1532856844
@@ -123,7 +119,7 @@ jobs:
         ' || '
         -submodules qtbase,qtimageformats,qtdeclarative,qtremoteobjects,qtsvg
         ' }}
-        -prefix ${{ matrix.prefix }}
+        -prefix buildroot/${{ env.QT_NVR }}
         --
         -DCMAKE_TOOLCHAIN_FILE="${VCPKG_INSTALLATION_ROOT}/scripts/buildsystems/vcpkg.cmake"
         -Wno-dev
@@ -139,13 +135,14 @@ jobs:
       env:
         ARCHIVE_CMD: ${{ runner.os == 'Windows' && '"C:\Program Files\7-Zip\7z.exe" a' || 'tar cjf' }}
       run: |
-        ${{ env.ARCHIVE_CMD }} ${{ env.QT_NVR }}.${{ matrix.archive }} ${{ matrix.prefix }}
+        cd buildroot
+        ${{ env.ARCHIVE_CMD }} ${{ env.QT_NVR }}.${{ matrix.archive }} ${{ env.QT_NVR }}
 
     - name: Create artifact
       uses: actions/upload-artifact@v4
       with:
         name: ${{ env.QT_NVR }}
-        path: ${{ env.QT_NVR }}.${{ matrix.archive }}
+        path: buildroot/${{ env.QT_NVR }}.${{ matrix.archive }}
         retention-days: 7
         if-no-files-found: error
 
@@ -155,6 +152,6 @@ jobs:
         tag_name: ${{ env.QT_NVR }}
         target_commitish: ${{ github.sha }}
         files: |
-          ${{ env.QT_NVR }}.${{ matrix.archive }}
+          buildroot/${{ env.QT_NVR }}.${{ matrix.archive }}
           config.opt
           config.summary
