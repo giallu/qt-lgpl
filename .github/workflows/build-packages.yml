@@ -3,6 +3,12 @@ name: Build Qt
 on:
   workflow_dispatch:
 
+permissions:
+  id-token: write
+  attestations: write
+  contents: write
+  actions: write
+
 env:  
   QT_VERSION: 6.8.1
   QT_RELEASE: 3
@@ -137,6 +143,11 @@ jobs:
       run: |
         cd buildroot
         ${{ env.ARCHIVE_CMD }} ${{ env.QT_NVR }}.${{ matrix.archive }} ${{ env.QT_NVR }}
+
+    - uses: actions/attest-build-provenance@v2
+      with:
+        subject-path: buildroot/${{ env.QT_NVR }}.${{ matrix.archive }}
+        subject-name: ${{ env.QT_NVR }}.${{ matrix.archive }}
 
     - name: Create artifact
       uses: actions/upload-artifact@v4
