@@ -1,4 +1,7 @@
 # Qt LGPL
+*TLDR*: A repository containing LGPL licensed Qt binaries, all the commercial bits skipped. A simple action to use them in GH workflows is available.
+
+## Motivation
 
 Let's face it: building Qt in all the platforms is a hassle. 
 
@@ -34,4 +37,24 @@ However, the LGPL license is widespread since ages, so its strenghts and limitat
 3. if you link dynamically with LGPL code you don't need to release your sources and the resulting combination can be distributed for free or for a fee
 
 ## How to use the binaries
-TODO
+Using the binaries is easy: just download the latest version for your OS, unpack it anywhere you like the add the `<QT_DIR>/bin` directory to your path so that tools like cmake determine all the other paths automatically.
+
+For convenience, action is provided in this repo so the setup in a GH workflow is automated by a step like this:
+
+```
+- name: Install Qt from giallu/qt-lgpl
+  uses: giallu/qt-lgpl@v1
+  with:
+    qt-version: 6.8.1-3
+    os: windows-2019
+```
+
+see [this sample repo](https://github.com/giallu/qt-test-ssl) for a working matrix build example using the action
+
+
+## License
+All the binaries in this repository are (of course...) LGPL licensed
+
+Everything else is covered by the MIT license
+
+If you need advice just contact me
