@@ -171,11 +171,14 @@ jobs:
     - name: Download and verify Qt sources
       shell: bash
       run: |
-        file=qt-everywhere-src-$QT_VERSION.tar.xz
+        # Since 6.8.4 the delayed open-source LTS releases are named
+        # qt-everywhere-opensource-src-*; the directory inside is unchanged.
+        url=
         for location in official_releases archive; do
-          url=https://download.qt.io/$location/qt/$QT_LINE/$QT_VERSION/single/$file
-          if curl -fsSL -o "$file.sha256" "$url.sha256"; then break; fi
-          url=
+          for file in qt-everywhere-src-$QT_VERSION.tar.xz qt-everywhere-opensource-src-$QT_VERSION.tar.xz; do
+            candidate=https://download.qt.io/$location/qt/$QT_LINE/$QT_VERSION/single/$file
+            if curl -fsSL -o "$file.sha256" "$candidate.sha256"; then url=$candidate; break 2; fi
+          done
         done
         [ -n "$url" ] || { echo "::error::Qt $QT_VERSION not found on download.qt.io"; exit 1; }
 
