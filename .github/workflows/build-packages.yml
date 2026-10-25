@@ -468,6 +468,21 @@ jobs:
         } > ../notes.md
         cat ../notes.md
 
+    # GITHUB_TOKEN may not create a tag on a commit whose workflow files
+    # differ from the default branch (that needs the "workflows" permission it
+    # can never have). This happens when main's workflows change while a
+    # build is running; fail with a clear message instead of an HTTP 403.
+    - name: Check workflows still match main
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        changed=$(gh api "repos/$GITHUB_REPOSITORY/compare/$GITHUB_SHA...${{ github.event.repository.default_branch }}" \
+                    -q '[.files[]?.filename | select(startswith(".github/workflows/"))] | join(" ")')
+        if [ -n "$changed" ]; then
+          echo "::error::Workflow files changed on ${{ github.event.repository.default_branch }} during this build ($changed), so GitHub will not let this run create the release tag. The packages are in this run's artifacts; start a new build from ${{ github.event.repository.default_branch }} to release."
+          exit 1
+        fi
+
     - name: Create release
       env:
         GH_TOKEN: ${{ github.token }}
