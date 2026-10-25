@@ -457,12 +457,30 @@ jobs:
       run: |
         set -o pipefail
         ls -la dist
+        pkg="${TAG#qt-}"
+        if [ "${{ inputs.draft }}" = true ]; then
+          # Drafts cannot be "Latest"; GitHub asks when the draft is published.
+          release_flags=(--draft)
+        else
+          # Mark as Latest only if this is the highest package published so far,
+          # so a new 6.8.x does not take the label away from 6.12.x.
+          highest=$( { gh release list -R "$GITHUB_REPOSITORY" --exclude-drafts --limit 200 \
+                         --json tagName -q '.[].tagName' \
+                       | sed -n 's/^qt-\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*-[0-9][0-9]*\)$/\1/p'; echo "$pkg"; } \
+                     | sort -t- -k1,1V -k2,2n | tail -1)
+          if [ "$highest" = "$pkg" ]; then
+            release_flags=(--latest)
+          else
+            echo "Not marking as Latest: $highest is higher"
+            release_flags=(--latest=false)
+          fi
+        fi
         gh release create "$TAG" \
           -R "$GITHUB_REPOSITORY" \
           --target "$GITHUB_SHA" \
           --title "Qt $QT_VERSION (release ${{ needs.prepare.outputs.release }})" \
           --notes-file notes.md \
-          ${{ inputs.draft && '--draft' || '' }} \
+          "${release_flags[@]}" \
           dist/*.zip dist/*.tar.xz dist/*.summary dist/*.opt dist/*.cdx.json 2>&1 | tee release.log
 
     - name: Report release errors
