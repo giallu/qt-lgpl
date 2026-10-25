@@ -279,7 +279,9 @@ jobs:
           -sbom
         )
         cmake_extra=()
-        if [ "$(jq -r '.unity_build // false' config/build.json)" = true ]; then
+        # Unity build is enabled per LTS line (6.8 does not build that way:
+        # zlib prefix macros clash inside QtCore's unity chunks).
+        if jq -e --arg l "$QT_LINE" '(.unity_build_lines // []) | index($l)' config/build.json >/dev/null; then
           args+=(-unity-build)
           # third-party projects that cannot be built as unity builds
           hook="$(pwd -W 2>/dev/null || pwd)/cmake/no-unity-build.cmake"
@@ -335,6 +337,7 @@ jobs:
       if: failure()
       shell: bash
       run: |
+        set +e +o pipefail   # grep | head would turn SIGPIPE into a failure
         for f in configure.log build.log; do
           [ -f "$f" ] || continue
           {

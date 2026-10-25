@@ -23,6 +23,8 @@
   "submodules_windows": [
     "qtactiveqt"
   ],
-  "unity_build": true,
+  "unity_build_lines": [
+    "6.12"
+  ],
   "auto_build_new_versions": true
 }
