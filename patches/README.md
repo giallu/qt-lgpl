@@ -59,6 +59,12 @@ patch against a specific Qt version, record the outcome in its entry:
   context that changed around otherwise identical code.
 - `"action": "apply"` with `"recount": true`: for upstream files whose hunk
   headers have wrong line counts.
+- `"action": "backport"` with `"file": "backports/<name>.diff"` and its
+  `"sha256"`: apply our own adaptation of the patch to that Qt version
+  instead. Backports live in `patches/<line>/backports/`, keep the upstream
+  commit message plus a note on what was changed and the upstream patch's
+  sha256, and are applied strictly (no reduced context). A backport not
+  referenced by any decision fails the build.
 
 Decisions are tied to one Qt version, so a new release is checked again from
 scratch. A patch that needs a decision and has none fails the build, and every

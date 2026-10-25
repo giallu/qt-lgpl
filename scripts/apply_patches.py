@@ -17,7 +17,11 @@ Rules, so nothing unreviewed reaches a build:
         "6.8.6": {"action": "apply", "min_context": 1, "recount": true, "reason": "..."}
       }
 
-  "skip" leaves the patch out; "apply" applies it with reduced context
+        "6.8.5": {"action": "backport", "file": "backports/<name>.diff", "sha256": "...", "reason": "..."}
+
+  "backport" applies our own adaptation of the patch to that Qt version
+  instead (stored in patches/<line>/backports/, checked against its sha256,
+  applied strictly). "skip" leaves the patch out; "apply" applies it with reduced context
   (git apply -C<n>, the equivalent of patch's fuzz) and/or --recount (for
   upstream files with wrong hunk line counts). Decisions are per Qt version,
   so every new release is checked again from scratch.
@@ -88,6 +92,15 @@ def main(argv: list[str] | None = None) -> int:
     if unlisted:
         print(f"error: patch files not listed in {lock_path}: {', '.join(unlisted)}", file=sys.stderr)
         return 1
+    referenced = {d.get("file") for e in lock.get("patches", []) for d in e.get("versions", {}).values()
+                  if d.get("action") == "backport"}
+    backport_dir = line_dir / "backports"
+    if backport_dir.is_dir():
+        orphans = sorted(f"backports/{p.name}" for p in backport_dir.iterdir()
+                         if p.suffix in PATCH_SUFFIXES and f"backports/{p.name}" not in referenced)
+        if orphans:
+            print(f"error: backports not referenced by any decision: {', '.join(orphans)}", file=sys.stderr)
+            return 1
 
     failed = False
     for entry in lock.get("patches", []):
@@ -103,10 +116,20 @@ def main(argv: list[str] | None = None) -> int:
 
         decision = entry.get("versions", {}).get(args.qt_version)
         if decision is not None:
-            if decision.get("action") not in ("skip", "apply") or not decision.get("reason"):
-                print(f"error: {name}: decision for {args.qt_version} needs action skip|apply and a reason",
-                      file=sys.stderr)
+            if decision.get("action") not in ("skip", "apply", "backport") or not decision.get("reason"):
+                print(f"error: {name}: decision for {args.qt_version} needs action skip|apply|backport "
+                      "and a reason", file=sys.stderr)
                 return 1
+            if decision["action"] == "backport":
+                bp = line_dir / str(decision.get("file", ""))
+                if not str(decision.get("file", "")).startswith("backports/") or not bp.is_file():
+                    print(f"error: {name}: backport file {decision.get('file')!r} missing", file=sys.stderr)
+                    return 1
+                bp_digest = hashlib.sha256(bp.read_bytes()).hexdigest()
+                if bp_digest != decision.get("sha256"):
+                    print(f"error: {decision['file']} sha256 {bp_digest} does not match the decision "
+                          f"{decision.get('sha256')}", file=sys.stderr)
+                    return 1
         options: list[str] = []
         note = ""
         if decision and decision["action"] == "apply":
@@ -125,6 +148,14 @@ def main(argv: list[str] | None = None) -> int:
             failed = True
         elif decision and decision["action"] == "skip":
             status = "skipped"
+        elif decision and decision["action"] == "backport":
+            bp = line_dir / decision["file"]
+            if git_apply(module_dir, bp, "--check") and git_apply(module_dir, bp):
+                status = "applied (backport)"
+                note = f"{decision['reason']} [{decision['file']}]"
+            else:
+                status = "FAILED (backport does not apply)"
+                failed = True
         elif git_apply(module_dir, patch, "--check", *options):
             status = "applied" if git_apply(module_dir, patch, *options) else "FAILED"
             failed |= status == "FAILED"

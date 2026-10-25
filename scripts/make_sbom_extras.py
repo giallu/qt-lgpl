@@ -36,7 +36,7 @@ def main(argv: list[str] | None = None) -> int:
     applied = []
     if args.patches and args.patches.exists():
         report = json.loads(args.patches.read_text())
-        applied = [x for x in report.get("patches", []) if x.get("status") == "applied"]
+        applied = [x for x in report.get("patches", []) if str(x.get("status", "")).startswith("applied")]
 
     qt = {
         "type": "framework",
@@ -58,6 +58,10 @@ def main(argv: list[str] | None = None) -> int:
             }
             for x in applied
         ]}
+        backports = [x for x in applied if x.get("status") == "applied (backport)"]
+        if backports:
+            qt["pedigree"]["notes"] = "Adapted (backported) by qt-lgpl for this Qt version: " + "; ".join(
+                f"{x['file']}: {x.get('note', '')}" for x in backports)
 
     components = [qt]
     if args.vcpkg_list and args.vcpkg_list.exists():

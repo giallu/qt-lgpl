@@ -262,6 +262,34 @@ class ApplyPatchesTest(unittest.TestCase):
         self.assertEqual(self.run_apply(), 0)
         self.assertEqual((self.src / "qtbase/src/f.txt").read_text(), "CHANGED\nnew\nctx3\n")
 
+    def test_backport_replaces_upstream_patch(self):
+        (self.src / "qtbase/src/hello.txt").write_text("hello\nmore\n")
+        upstream = (b"diff --git a/src/hello.txt b/src/hello.txt\n--- a/src/hello.txt\n+++ b/src/hello.txt\n"
+                    b"@@ -1,2 +1,2 @@\n-hello\n+hello, patched\n different\n")
+        (self.pdir / "a.diff").write_bytes(upstream)
+        (self.pdir / "backports").mkdir()
+        bp = (b"diff --git a/src/hello.txt b/src/hello.txt\n--- a/src/hello.txt\n+++ b/src/hello.txt\n"
+              b"@@ -1,2 +1,2 @@\n-hello\n+hello, patched\n more\n")
+        (self.pdir / "backports/a-backport.diff").write_bytes(bp)
+        entry = {"file": "a.diff", "module": "qtbase", "cve": "CVE-1", "source": "s",
+                 "sha256": hashlib.sha256(upstream).hexdigest()}
+        self.write_lock([entry])
+        self.assertEqual(self.run_apply(), 1)  # upstream conflicts
+        entry["versions"] = {"6.12.0": {"action": "backport", "file": "backports/a-backport.diff",
+                                        "sha256": hashlib.sha256(bp).hexdigest(), "reason": "context"}}
+        self.write_lock([entry])
+        self.assertEqual(self.run_apply(), 0)
+        self.assertEqual((self.src / "qtbase/src/hello.txt").read_text(), "hello, patched\nmore\n")
+        self.assertIn("applied (backport)", (self.tmp / "report.md").read_text())
+        # tampered backport is refused
+        (self.pdir / "backports/a-backport.diff").write_bytes(bp + b" \n")
+        self.assertEqual(self.run_apply(), 1)
+
+    def test_orphan_backport_fails(self):
+        (self.pdir / "backports").mkdir()
+        (self.pdir / "backports/x.diff").write_bytes(b"x")
+        self.assertEqual(self.run_apply(), 1)
+
     def test_decision_without_reason_is_rejected(self):
         self.write_lock([{"file": "a.diff", "module": "qtbase", "cve": "CVE-1", "sha256": SHA,
                           "source": "s", "versions": {"6.12.0": {"action": "skip"}}}])
