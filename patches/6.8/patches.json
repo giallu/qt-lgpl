@@ -145,7 +145,16 @@
       "archive": "CVE-2026-8168-qtsvg-6.8.zip",
       "archive_sha256": "3435b23c614f367f22e4d1697363aaa7dcf5581e8edf0035adc625636902ebef",
       "upstream_date": "19-Oct-2026 14:54",
-      "added": "2026-10-25T19:17:52+00:00"
+      "added": "2026-10-25T19:17:52+00:00",
+      "versions": {
+        "6.8.5": {
+          "action": "backport",
+          "file": "backports/CVE-2026-8168-qtsvg-6.8.5-0002-backport.diff",
+          "sha256": "074a02f9bb04355c923c555808111b09fe64b989d3a1361cd0caad686cf726c7",
+          "reason": "6.8.5 declares the QSvgTinyDocument destructor as an empty body instead of '= default'; the releaseDescendants() call goes into it. Other hunks unchanged. All node types handled by releaseDescendants() are QSvgStructureNode subclasses in 6.8.5 too.",
+          "reviewed": "2026-10-25"
+        }
+      }
     },
     {
       "file": "CVE-2026-8168-qtsvg-6.8-0003.diff",
@@ -326,7 +335,16 @@
       "sha256": "df8dac60584ccf9a6de47b05af50c4714ffda833858baa58e65c565ba58fdad7",
       "source": "https://download.qt.io/archive/qt/6.8/CVE-2026-79616-qtdeclarative-6.8.diff",
       "upstream_date": "17-Sep-2026 09:22",
-      "added": "2026-10-25T18:03:10+00:00"
+      "added": "2026-10-25T18:03:10+00:00",
+      "versions": {
+        "6.8.5": {
+          "action": "backport",
+          "file": "backports/CVE-2026-79616-qtdeclarative-6.8.5-backport.diff",
+          "sha256": "20688e50479b7e3961254aad405eb7a3a8c7de412b5b66461aff49cfdd6f70cd",
+          "reason": "Source changes unchanged; only the new QML test functions are moved to the end of tst_svgpath.qml, whose surrounding test code differs in 6.8.5.",
+          "reviewed": "2026-10-25"
+        }
+      }
     },
     {
       "file": "CVE-2026-82292-qtbase-6.8.diff",
@@ -397,7 +415,16 @@
       "sha256": "c90b493a7983be3ebfabaeb337496a693268843c7e52ec4727bfbadddca2d4ba",
       "source": "https://download.qt.io/archive/qt/6.8/CVE-2026-96432-qtbase-6.8.diff",
       "upstream_date": "20-Oct-2026 15:58",
-      "added": "2026-10-25T18:03:10+00:00"
+      "added": "2026-10-25T18:03:10+00:00",
+      "versions": {
+        "6.8.5": {
+          "action": "backport",
+          "file": "backports/CVE-2026-96432-qtbase-6.8.5-backport.diff",
+          "sha256": "49bcca7a231b7733391a10a985cc11c5816ea68a263284df3832ae05a563cbe2",
+          "reason": "Fix in qhttp2connection.cpp unchanged (3 lines); the new autotest is left out because it builds on test cases and helpers 6.8.5 does not have.",
+          "reviewed": "2026-10-25"
+        }
+      }
     }
   ]
 }
