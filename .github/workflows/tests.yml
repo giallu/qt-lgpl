@@ -1,0 +1,22 @@
+name: Tests
+
+on:
+  push:
+    paths: ['scripts/**', 'tests/**', '.github/workflows/**']
+  pull_request:
+    paths: ['scripts/**', 'tests/**', '.github/workflows/**']
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run script tests
+        run: python3 -m unittest discover -s tests -v
+      - name: Validate JSON config
+        run: |
+          jq empty config/build.json config/upstream-state.json
+          for f in patches/*/patches.json; do [ -e "$f" ] && jq empty "$f"; done; true

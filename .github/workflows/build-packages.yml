@@ -2,49 +2,117 @@ name: Build Qt
 
 on:
   workflow_dispatch:
+    inputs:
+      qt-version:
+        description: 'Upstream Qt version, e.g. 6.12.0 or 6.8.5'
+        required: true
+        type: string
+      package-release:
+        description: 'Package release number (empty = next free number for this Qt version)'
+        required: false
+        type: string
+        default: ''
+      draft:
+        description: 'Create the GitHub release as a draft'
+        required: false
+        type: boolean
+        default: true
 
 permissions:
-  id-token: write
-  attestations: write
-  contents: write
-  actions: write
+  contents: read
 
-env:  
-  QT_VERSION: 6.8.1
-  QT_RELEASE: 3
+concurrency:
+  group: build-qt-${{ inputs.qt-version }}
+  cancel-in-progress: false
 
 jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      qt-version: ${{ steps.vars.outputs.qt-version }}
+      qt-line: ${{ steps.vars.outputs.qt-line }}
+      release: ${{ steps.vars.outputs.release }}
+      tag: ${{ steps.vars.outputs.tag }}
+      submodules: ${{ steps.vars.outputs.submodules }}
+      submodules-windows: ${{ steps.vars.outputs.submodules-windows }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute version strings
+        id: vars
+        env:
+          GH_TOKEN: ${{ github.token }}
+          QT_VERSION: ${{ inputs.qt-version }}
+          PKG_RELEASE: ${{ inputs.package-release }}
+        run: |
+          if ! [[ "$QT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::qt-version must look like 6.12.0, got '$QT_VERSION'"; exit 1
+          fi
+          line=$(echo "$QT_VERSION" | cut -d. -f1-2)
+          if ! jq -e --arg l "$line" '.lts_lines | index($l)' config/build.json >/dev/null; then
+            echo "::warning::Qt $line is not in lts_lines of config/build.json"
+          fi
+
+          if [ -z "$PKG_RELEASE" ]; then
+            # next free package release for this Qt version
+            last=$(gh release list -R "$GITHUB_REPOSITORY" --limit 200 --json tagName -q '.[].tagName' \
+                   | sed -n "s/^qt-${QT_VERSION//./\\.}-\([0-9]\+\)$/\1/p" | sort -n | tail -1)
+            PKG_RELEASE=$(( ${last:-0} + 1 ))
+          fi
+          if ! [[ "$PKG_RELEASE" =~ ^[0-9]+$ ]]; then
+            echo "::error::package-release must be a number"; exit 1
+          fi
+
+          {
+            echo "qt-version=$QT_VERSION"
+            echo "qt-line=$line"
+            echo "release=$PKG_RELEASE"
+            echo "tag=qt-$QT_VERSION-$PKG_RELEASE"
+            echo "submodules=$(jq -r '.submodules | join(",")' config/build.json)"
+            echo "submodules-windows=$(jq -r '(.submodules + .submodules_windows) | join(",")' config/build.json)"
+          } | tee -a "$GITHUB_OUTPUT"
+
   build:
-    # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations. Consider changing this to true when your workflow is stable.
+    needs: prepare
     strategy:
       fail-fast: false
-    
       matrix:
         include:
-          - os: windows-2019
+          - os: windows-2025
             triplet: x64-windows-static
             archive: zip
-  
-          - os: ubuntu-22.04
+
+          - os: ubuntu-22.04      # oldest supported glibc = widest compatibility
             triplet: x64-linux
             archive: tar.xz
 
-    runs-on: ${{ matrix.os }} 
+          - os: macos-15
+            triplet: arm64-osx
+            archive: tar.xz
+
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    env:
+      QT_VERSION: ${{ needs.prepare.outputs.qt-version }}
+      QT_LINE: ${{ needs.prepare.outputs.qt-line }}
+      SUBMODULES: ${{ startsWith(matrix.os, 'windows') && needs.prepare.outputs.submodules-windows || needs.prepare.outputs.submodules }}
     steps:
     - uses: actions/checkout@v4
+
+    - name: Set package name
+      shell: bash
+      run: |
+        os_name=${{ matrix.os }}
+        echo "QT_NVR=${{ needs.prepare.outputs.tag }}-${os_name//[.-]/}" >> "$GITHUB_ENV"
 
     - name: Set up Visual Studio shell
       if: runner.os == 'Windows'
       uses: egor-tensin/vs-shell@v2
       with:
         arch: x64
-
-    - name: Set version strings
-      shell: bash
-      run: |
-        os_name=${{ matrix.os }}
-        echo "QT_VERSION_XY=$(echo ${{ env.QT_VERSION }} | cut -d. -f1-2)" >> "$GITHUB_ENV"
-        echo "QT_NVR=$(echo qt-${{ env.QT_VERSION }}-${{ env.QT_RELEASE }}-${os_name//[.-]/})" >> "$GITHUB_ENV"
 
     # Needed to use GNU patch instead of Strawberry Perl patch
     # https://github.com/actions/runner-images/issues/5459#issuecomment-1532856844
@@ -82,6 +150,10 @@ jobs:
         libxkbcommon-x11-dev \
         libxrender-dev
 
+    - name: Install macOS dependencies
+      if: runner.os == 'macOS'
+      run: brew install ninja
+
     # Linux builds failed due to low disk space, apply sugegstion from
     # https://github.com/actions/runner-images/issues/10699#issuecomment-2402475892
     - name: Clean up disk space
@@ -91,25 +163,71 @@ jobs:
         sudo rm -rf /usr/local/lib/android
         sudo rm -rf /opt/ghc
 
-    - name: Download and extract Qt sources
+    - name: Download and verify Qt sources
       shell: bash
       run: |
-        curl -LO https://download.qt.io/archive/qt/${{ env.QT_VERSION_XY }}/${{ env.QT_VERSION }}/single/qt-everywhere-src-${{ env.QT_VERSION }}.tar.xz
-        tar xf qt-everywhere-src-${{ env.QT_VERSION }}.tar.xz
+        file=qt-everywhere-src-$QT_VERSION.tar.xz
+        for location in official_releases archive; do
+          url=https://download.qt.io/$location/qt/$QT_LINE/$QT_VERSION/single/$file
+          if curl -fsSL -o "$file.sha256" "$url.sha256"; then break; fi
+          url=
+        done
+        [ -n "$url" ] || { echo "::error::Qt $QT_VERSION not found on download.qt.io"; exit 1; }
+
+        # The .sha256 is served by download.qt.io itself; the tarball may come
+        # from a mirror, so it is checked against that published hash.
+        expected=$(grep -oE '[0-9a-f]{64}' "$file.sha256" | head -1)
+        [ -n "$expected" ] || { echo "::error::no SHA-256 published for $url"; exit 1; }
+        echo "Downloading $url (expected sha256 $expected)"
+        curl -fL --retry 3 -o "$file" "$url"
+        PY=$(command -v python3 || command -v python)
+        echo "PY=$PY" >> "$GITHUB_ENV"
+        "$PY" - "$file" "$expected" <<'EOF'
+        import hashlib, sys
+        path, expected = sys.argv[1], sys.argv[2]
+        h = hashlib.sha256()
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(1 << 20), b""):
+                h.update(chunk)
+        if h.hexdigest() != expected:
+            sys.exit(f"SHA-256 mismatch for {path}: got {h.hexdigest()}, expected {expected}")
+        print(f"SHA-256 OK: {expected}")
+        EOF
+        echo "QT_SRC_SHA256=$expected" >> "$GITHUB_ENV"
+        echo "QT_SRC_URL=$url" >> "$GITHUB_ENV"
+        tar xf "$file"
+        rm "$file"
+
+    - name: Apply reviewed security patches
+      shell: bash
+      run: |
+        "$PY" scripts/apply_patches.py \
+          --src qt-everywhere-src-$QT_VERSION \
+          --line $QT_LINE \
+          --modules "$SUBMODULES" \
+          --report patches-$QT_NVR.md
+
+    - name: Set up vcpkg
+      shell: bash
+      run: |
+        if [ -z "$VCPKG_INSTALLATION_ROOT" ] || [ ! -d "$VCPKG_INSTALLATION_ROOT" ]; then
+          git clone --depth 1 https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
+          "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
+          echo "VCPKG_INSTALLATION_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
+        fi
 
     - name: Install dependencies
       shell: bash
       run: |
-        vcpkg install openssl --triplet=${{ matrix.triplet }}
-      
+        "$VCPKG_INSTALLATION_ROOT/vcpkg" install openssl --triplet=${{ matrix.triplet }}
+
     - name: Configure build
       shell: bash
       run: >
-        qt-everywhere-src-${{ env.QT_VERSION }}/configure${{ runner.os == 'Windows' && '.bat' || '' }}
+        qt-everywhere-src-$QT_VERSION/configure${{ runner.os == 'Windows' && '.bat' || '' }}
         -cmake-generator Ninja
         -openssl-linked
         -release
-        -no-use-gold-linker
         -qt-libjpeg
         -qt-libpng
         -qt-zlib
@@ -119,15 +237,13 @@ jobs:
         -nomake examples
         -nomake tests
         -make tools
-        ${{ runner.os == 'Windows' && '
-        -opengl dynamic
-        -submodules qtbase,qtimageformats,qtdeclarative,qtsvg,qtremoteobjects,qtactiveqt
-        ' || '
-        -submodules qtbase,qtimageformats,qtdeclarative,qtremoteobjects,qtsvg
-        ' }}
-        -prefix buildroot/${{ env.QT_NVR }}
+        ${{ runner.os == 'Windows' && '-opengl dynamic' || '' }}
+        ${{ runner.os == 'Linux' && '-no-use-gold-linker' || '' }}
+        -submodules $SUBMODULES
+        -prefix buildroot/$QT_NVR
         --
         -DCMAKE_TOOLCHAIN_FILE="${VCPKG_INSTALLATION_ROOT}/scripts/buildsystems/vcpkg.cmake"
+        -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }}
         -Wno-dev
 
     - name: Compile and install
@@ -138,31 +254,84 @@ jobs:
 
     - name: Create archive
       shell: bash
-      env:
-        ARCHIVE_CMD: ${{ runner.os == 'Windows' && '"C:\Program Files\7-Zip\7z.exe" a' || 'tar cjf' }}
       run: |
+        mkdir dist
         cd buildroot
-        ${{ env.ARCHIVE_CMD }} ${{ env.QT_NVR }}.${{ matrix.archive }} ${{ env.QT_NVR }}
+        if [ "${{ matrix.archive }}" = zip ]; then
+          "C:\Program Files\7-Zip\7z.exe" a ../dist/$QT_NVR.zip $QT_NVR
+        else
+          tar cJf ../dist/$QT_NVR.tar.xz $QT_NVR
+        fi
+        cd ..
+        cp config.summary dist/config-$QT_NVR.summary
+        cp config.opt dist/config-$QT_NVR.opt
+        mv patches-$QT_NVR.md dist/
+        echo "$QT_SRC_SHA256  $QT_SRC_URL" > dist/source-$QT_NVR.sha256
 
-    - uses: actions/attest-build-provenance@v2
-      with:
-        subject-path: buildroot/${{ env.QT_NVR }}.${{ matrix.archive }}
-        subject-name: ${{ env.QT_NVR }}.${{ matrix.archive }}
-
-    - name: Create artifact
+    - name: Upload build output
       uses: actions/upload-artifact@v4
       with:
         name: ${{ env.QT_NVR }}
-        path: buildroot/${{ env.QT_NVR }}.${{ matrix.archive }}
+        path: dist/
         retention-days: 7
         if-no-files-found: error
 
-    - name: Create release
-      uses: softprops/action-gh-release@v2
+  release:
+    needs: [prepare, build]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write       # create the release
+      id-token: write       # build provenance attestation
+      attestations: write
+    env:
+      TAG: ${{ needs.prepare.outputs.tag }}
+      QT_VERSION: ${{ needs.prepare.outputs.qt-version }}
+    steps:
+    - name: Download build outputs
+      uses: actions/download-artifact@v4
       with:
-        tag_name: ${{ env.QT_NVR }}
-        target_commitish: ${{ github.sha }}
-        files: |
-          buildroot/${{ env.QT_NVR }}.${{ matrix.archive }}
-          config.opt
-          config.summary
+        path: dist
+        merge-multiple: true
+
+    - uses: actions/attest-build-provenance@v2
+      with:
+        subject-path: |
+          dist/*.zip
+          dist/*.tar.xz
+
+    - name: Write release notes
+      run: |
+        cd dist
+        {
+          echo "LGPL-only build of upstream Qt $QT_VERSION (package release ${{ needs.prepare.outputs.release }})."
+          echo
+          echo "Upstream source: \`$(cut -d' ' -f3 "$(ls source-*.sha256 | head -1)")\`"
+          echo "Source SHA-256: \`$(cut -d' ' -f1 "$(ls source-*.sha256 | head -1)")\` (verified against download.qt.io)"
+          echo
+          echo "Modules: $(echo '${{ needs.prepare.outputs.submodules }}' | sed 's/,/, /g') (+ qtactiveqt on Windows)"
+          echo
+          echo "## Security patches"
+          echo
+          cat "$(ls patches-*.md | head -1)"
+          echo
+          echo "## SHA-256 of the packages"
+          echo
+          echo '```'
+          sha256sum *.zip *.tar.xz
+          echo '```'
+          echo
+          echo "Verify provenance with: \`gh attestation verify <file> --repo $GITHUB_REPOSITORY\`"
+        } > ../notes.md
+        cat ../notes.md
+
+    - name: Create release
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        gh release create "$TAG" \
+          -R "$GITHUB_REPOSITORY" \
+          --target "$GITHUB_SHA" \
+          --title "Qt $QT_VERSION (release ${{ needs.prepare.outputs.release }})" \
+          --notes-file notes.md \
+          ${{ inputs.draft && '--draft' || '' }} \
+          dist/*.zip dist/*.tar.xz dist/*.summary dist/*.opt
