@@ -1,0 +1,70 @@
+name: Test action
+
+# Installs a published package with this repository's action on every
+# platform, builds tests/smoke-app against it and runs it (SVG, QML engine,
+# TLS backend, real HTTPS request). Runs for every published release and on
+# demand.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      qt-version:
+        description: 'Package to test, e.g. 6.12.0-1 or 6.12-latest'
+        required: true
+        default: '6.12-latest'
+
+permissions:
+  contents: read
+  attestations: read
+
+jobs:
+  smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2025, ubuntu-22.04, ubuntu-24.04, macos-15]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Package to test
+        id: pkg
+        shell: bash
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          INPUT: ${{ inputs.qt-version }}
+        run: |
+          if [ "${{ github.event_name }}" = release ]; then
+            echo "version=${TAG#qt-}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=$INPUT" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Runtime libraries (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1 libegl1 libfontconfig1 libxkbcommon0
+
+      - name: Install Qt with the action
+        id: qt
+        uses: ./
+        with:
+          qt-version: ${{ steps.pkg.outputs.version }}
+
+      - name: Build smoke app
+        shell: bash
+        run: |
+          cmake -S tests/smoke-app -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release
+
+      - name: Run smoke app
+        shell: bash
+        run: |
+          exe=build/smoke
+          [ -x build/Release/smoke.exe ] && exe=build/Release/smoke.exe
+          "$exe"
