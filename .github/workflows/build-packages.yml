@@ -418,10 +418,19 @@ jobs:
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
+        set -o pipefail
+        ls -la dist
         gh release create "$TAG" \
           -R "$GITHUB_REPOSITORY" \
           --target "$GITHUB_SHA" \
           --title "Qt $QT_VERSION (release ${{ needs.prepare.outputs.release }})" \
           --notes-file notes.md \
           ${{ inputs.draft && '--draft' || '' }} \
-          dist/*.zip dist/*.tar.xz dist/*.summary dist/*.opt dist/*.cdx.json
+          dist/*.zip dist/*.tar.xz dist/*.summary dist/*.opt dist/*.cdx.json 2>&1 | tee release.log
+
+    - name: Report release errors
+      if: failure()
+      run: |
+        [ -f release.log ] || exit 0
+        msg=$(tail -20 release.log | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}')
+        echo "::error title=gh release create::$msg"
