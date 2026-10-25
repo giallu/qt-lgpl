@@ -160,12 +160,13 @@ jobs:
 
     # Linux builds failed due to low disk space, apply sugegstion from
     # https://github.com/actions/runner-images/issues/10699#issuecomment-2402475892
+    # Runs in the background (it takes ~3.5 min) while sources download and
+    # vcpkg installs; "Configure build" waits for it to finish.
     - name: Clean up disk space
       if: runner.os == 'Linux'
       run: |
-        sudo rm -rf /usr/share/dotnet
-        sudo rm -rf /usr/local/lib/android
-        sudo rm -rf /opt/ghc
+        nohup sh -c 'sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc; touch "$RUNNER_TEMP/cleanup.done"' \
+          > "$RUNNER_TEMP/cleanup.log" 2>&1 &
 
     - name: Download and verify Qt sources
       shell: bash
@@ -213,13 +214,27 @@ jobs:
           --json-report patches-$QT_NVR.json
 
     - name: Set up vcpkg
+      id: vcpkg
       shell: bash
       run: |
-        if [ -z "$VCPKG_INSTALLATION_ROOT" ] || [ ! -d "$VCPKG_INSTALLATION_ROOT" ]; then
-          git clone --depth 1 https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
-          "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
-          echo "VCPKG_INSTALLATION_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
+        root="$VCPKG_INSTALLATION_ROOT"
+        if [ -z "$root" ] || [ ! -d "$root" ]; then
+          root="$RUNNER_TEMP/vcpkg"
+          git clone --depth 1 https://github.com/microsoft/vcpkg "$root"
+          "$root/bootstrap-vcpkg.sh" -disableMetrics
+          echo "VCPKG_INSTALLATION_ROOT=$root" >> "$GITHUB_ENV"
         fi
+        # Binary cache: OpenSSL is rebuilt only when vcpkg itself changes.
+        echo "VCPKG_BINARY_SOURCES=clear;files,$RUNNER_TEMP/vcpkg-cache,readwrite" >> "$GITHUB_ENV"
+        mkdir -p "$RUNNER_TEMP/vcpkg-cache"
+        echo "commit=$(git -C "$root" rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+    - name: Restore vcpkg binary cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ runner.temp }}/vcpkg-cache
+        key: vcpkg-${{ matrix.triplet }}-${{ steps.vcpkg.outputs.commit }}
+        restore-keys: vcpkg-${{ matrix.triplet }}-
 
     - name: Install dependencies
       shell: bash
@@ -259,6 +274,9 @@ jobs:
           -prefix "buildroot/$QT_NVR"
           -sbom
         )
+        if [ "$(jq -r '.unity_build // false' config/build.json)" = true ]; then
+          args+=(-unity-build)
+        fi
         if [ "$(printf '%s\n' 6.11.0 "$QT_VERSION" | sort -V | head -1)" = 6.11.0 ]; then
           args+=(-sbom-cyclonedx-v1_6)
         fi
@@ -269,6 +287,11 @@ jobs:
         fi
         if [ "$RUNNER_OS" = Linux ]; then
           args+=(-no-use-gold-linker)
+        fi
+        if [ "$RUNNER_OS" = Linux ]; then
+          for _ in $(seq 60); do [ -f "$RUNNER_TEMP/cleanup.done" ] && break; echo "waiting for disk cleanup..."; sleep 10; done
+          cat "$RUNNER_TEMP/cleanup.log" 2>/dev/null || true
+          df -h /
         fi
         set -o pipefail
         # FEATURE_clang*: qttools would otherwise pick up whatever libclang the
