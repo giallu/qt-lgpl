@@ -304,12 +304,15 @@ jobs:
           df -h /
         fi
         set -o pipefail
-        # FEATURE_clang*: qttools would otherwise pick up whatever libclang the
-        # runner has (e.g. Homebrew LLVM on macOS) for qdoc/lupdate, making the
-        # package depend on it at run time.
+        # qttools would otherwise pick up whatever libclang the runner has
+        # (Homebrew LLVM on macOS, a broken llvm-14 on Ubuntu 22.04) for
+        # qdoc/lupdate, making the package depend on it at run time or
+        # failing configure (6.8 looks for it even with the features off).
         "$configure" "${args[@]}" -- \
           -DFEATURE_clang=OFF \
           -DFEATURE_clangcpp=OFF \
+          -DCMAKE_DISABLE_FIND_PACKAGE_WrapLibClang=ON \
+          -DCMAKE_DISABLE_FIND_PACKAGE_Clang=ON \
           "${cmake_extra[@]}" \
           -DCMAKE_TOOLCHAIN_FILE="$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" \
           -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }} \
