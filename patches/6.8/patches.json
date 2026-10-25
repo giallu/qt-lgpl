@@ -8,7 +8,14 @@
       "sha256": "1e562a9f4a2cded2034e5e719c1e7dbc5cad6c0e3438940081e4b3371949cbb6",
       "source": "https://download.qt.io/archive/qt/6.8/CVE-2025-3512-qtbase-6.8.diff",
       "upstream_date": "11-Apr-2025 12:42",
-      "added": "2026-10-25T18:03:10+00:00"
+      "added": "2026-10-25T18:03:10+00:00",
+      "versions": {
+        "6.8.5": {
+          "action": "skip",
+          "reason": "Already fixed in 6.8.5: front matter parsing is the version from this patch, with the correct \"---\\r\\n\" marker (the upstream diff has a typo, \"---r\\n\"). Only test changes differ.",
+          "reviewed": "2026-10-25"
+        }
+      }
     },
     {
       "file": "CVE-2025-4211-qtbase-6.8.diff",
@@ -119,49 +126,130 @@
       "added": "2026-10-25T18:03:10+00:00"
     },
     {
-      "file": "CVE-2026-8168-qtsvg-6.8-0000.diff",
-      "cve": "CVE-2026-8168",
-      "module": "qtsvg",
-      "sha256": "51e249f61dd5f3da75d2f8efae700375ddfa5e7e90d0c384b3dc6afde034d2c1",
-      "source": "https://download.qt.io/archive/qt/6.8/CVE-2026-8168-qtsvg-6.8-0000.diff",
-      "upstream_date": "24-Jul-2026 19:21",
-      "added": "2026-10-25T18:03:10+00:00"
-    },
-    {
       "file": "CVE-2026-8168-qtsvg-6.8-0001.diff",
       "cve": "CVE-2026-8168",
       "module": "qtsvg",
-      "sha256": "68f9390029492c1eefe5e0a2c63687b6536c21267c5b55ad590061cac444c42b",
-      "source": "https://download.qt.io/archive/qt/6.8/CVE-2026-8168-qtsvg-6.8-0001.diff",
-      "upstream_date": "24-Jul-2026 19:21",
-      "added": "2026-10-25T18:03:10+00:00"
+      "sha256": "51e249f61dd5f3da75d2f8efae700375ddfa5e7e90d0c384b3dc6afde034d2c1",
+      "source": "https://download.qt.io/archive/qt/6.8/CVE-2026-8168-qtsvg-6.8.zip#CVE-2026-8168-qtsvg-6.8-0001.diff",
+      "archive": "CVE-2026-8168-qtsvg-6.8.zip",
+      "archive_sha256": "3435b23c614f367f22e4d1697363aaa7dcf5581e8edf0035adc625636902ebef",
+      "upstream_date": "19-Oct-2026 14:54",
+      "added": "2026-10-25T19:17:52+00:00"
     },
     {
       "file": "CVE-2026-8168-qtsvg-6.8-0002.diff",
       "cve": "CVE-2026-8168",
       "module": "qtsvg",
       "sha256": "73c57e4ff97f96689925d0eea122a8c7c9ac51acad4f853186f8c29e074f0da5",
-      "source": "https://download.qt.io/archive/qt/6.8/CVE-2026-8168-qtsvg-6.8-0002.diff",
-      "upstream_date": "24-Jul-2026 19:21",
-      "added": "2026-10-25T18:03:10+00:00"
+      "source": "https://download.qt.io/archive/qt/6.8/CVE-2026-8168-qtsvg-6.8.zip#CVE-2026-8168-qtsvg-6.8-0002.diff",
+      "archive": "CVE-2026-8168-qtsvg-6.8.zip",
+      "archive_sha256": "3435b23c614f367f22e4d1697363aaa7dcf5581e8edf0035adc625636902ebef",
+      "upstream_date": "19-Oct-2026 14:54",
+      "added": "2026-10-25T19:17:52+00:00"
     },
     {
       "file": "CVE-2026-8168-qtsvg-6.8-0003.diff",
       "cve": "CVE-2026-8168",
       "module": "qtsvg",
-      "sha256": "e08ad649fbbc58029ed1922617f9750f5f22a2210188f0c5b3308e0bcbcc18d8",
-      "source": "https://download.qt.io/archive/qt/6.8/CVE-2026-8168-qtsvg-6.8-0003.diff",
-      "upstream_date": "24-Jul-2026 19:21",
-      "added": "2026-10-25T18:03:10+00:00"
+      "sha256": "68f9390029492c1eefe5e0a2c63687b6536c21267c5b55ad590061cac444c42b",
+      "source": "https://download.qt.io/archive/qt/6.8/CVE-2026-8168-qtsvg-6.8.zip#CVE-2026-8168-qtsvg-6.8-0003.diff",
+      "archive": "CVE-2026-8168-qtsvg-6.8.zip",
+      "archive_sha256": "3435b23c614f367f22e4d1697363aaa7dcf5581e8edf0035adc625636902ebef",
+      "upstream_date": "19-Oct-2026 14:54",
+      "added": "2026-10-25T19:17:52+00:00",
+      "versions": {
+        "6.8.5": {
+          "action": "apply",
+          "min_context": 1,
+          "reason": "Context only: m_style is declared as a raw pointer in 6.8.5; every m_paintStyleResolved use is removed consistently; result identical to GNU patch -F2.",
+          "reviewed": "2026-10-25"
+        }
+      }
     },
     {
       "file": "CVE-2026-8168-qtsvg-6.8-0004.diff",
       "cve": "CVE-2026-8168",
       "module": "qtsvg",
+      "sha256": "b9ae1a5d015d664dc9230e6a59019eec9f3cc913ebeab642ef46186f5f845e5b",
+      "source": "https://download.qt.io/archive/qt/6.8/CVE-2026-8168-qtsvg-6.8.zip#CVE-2026-8168-qtsvg-6.8-0004.diff",
+      "archive": "CVE-2026-8168-qtsvg-6.8.zip",
+      "archive_sha256": "3435b23c614f367f22e4d1697363aaa7dcf5581e8edf0035adc625636902ebef",
+      "upstream_date": "19-Oct-2026 14:54",
+      "added": "2026-10-25T19:17:52+00:00"
+    },
+    {
+      "file": "CVE-2026-8168-qtsvg-6.8-0005.diff",
+      "cve": "CVE-2026-8168",
+      "module": "qtsvg",
+      "sha256": "d544c57cdd5c1cecfbfe53d35229cbe225e02d47a13b4ac92ece7afe1c0cb9d8",
+      "source": "https://download.qt.io/archive/qt/6.8/CVE-2026-8168-qtsvg-6.8.zip#CVE-2026-8168-qtsvg-6.8-0005.diff",
+      "archive": "CVE-2026-8168-qtsvg-6.8.zip",
+      "archive_sha256": "3435b23c614f367f22e4d1697363aaa7dcf5581e8edf0035adc625636902ebef",
+      "upstream_date": "19-Oct-2026 14:54",
+      "added": "2026-10-25T19:17:52+00:00"
+    },
+    {
+      "file": "CVE-2026-8168-qtsvg-6.8-0006.diff",
+      "cve": "CVE-2026-8168",
+      "module": "qtsvg",
+      "sha256": "e08ad649fbbc58029ed1922617f9750f5f22a2210188f0c5b3308e0bcbcc18d8",
+      "source": "https://download.qt.io/archive/qt/6.8/CVE-2026-8168-qtsvg-6.8.zip#CVE-2026-8168-qtsvg-6.8-0006.diff",
+      "archive": "CVE-2026-8168-qtsvg-6.8.zip",
+      "archive_sha256": "3435b23c614f367f22e4d1697363aaa7dcf5581e8edf0035adc625636902ebef",
+      "upstream_date": "19-Oct-2026 14:54",
+      "added": "2026-10-25T19:17:52+00:00"
+    },
+    {
+      "file": "CVE-2026-8168-qtsvg-6.8-0007.diff",
+      "cve": "CVE-2026-8168",
+      "module": "qtsvg",
       "sha256": "83f5a4fa886284c3871dfbb369d38e51136dcfb539f60ff499e8a15c3f589aa3",
-      "source": "https://download.qt.io/archive/qt/6.8/CVE-2026-8168-qtsvg-6.8-0004.diff",
-      "upstream_date": "24-Jul-2026 19:21",
-      "added": "2026-10-25T18:03:10+00:00"
+      "source": "https://download.qt.io/archive/qt/6.8/CVE-2026-8168-qtsvg-6.8.zip#CVE-2026-8168-qtsvg-6.8-0007.diff",
+      "archive": "CVE-2026-8168-qtsvg-6.8.zip",
+      "archive_sha256": "3435b23c614f367f22e4d1697363aaa7dcf5581e8edf0035adc625636902ebef",
+      "upstream_date": "19-Oct-2026 14:54",
+      "added": "2026-10-25T19:17:52+00:00"
+    },
+    {
+      "file": "CVE-2026-8168-qtsvg-6.8-0008.diff",
+      "cve": "CVE-2026-8168",
+      "module": "qtsvg",
+      "sha256": "d08c8e1cc0fa6cdb6f3113c6ca01731a8fa82bac9d8cb3779a128e6759fc8d7e",
+      "source": "https://download.qt.io/archive/qt/6.8/CVE-2026-8168-qtsvg-6.8.zip#CVE-2026-8168-qtsvg-6.8-0008.diff",
+      "archive": "CVE-2026-8168-qtsvg-6.8.zip",
+      "archive_sha256": "3435b23c614f367f22e4d1697363aaa7dcf5581e8edf0035adc625636902ebef",
+      "upstream_date": "19-Oct-2026 14:54",
+      "added": "2026-10-25T19:17:52+00:00"
+    },
+    {
+      "file": "CVE-2026-8168-qtsvg-6.8-0009.diff",
+      "cve": "CVE-2026-8168",
+      "module": "qtsvg",
+      "sha256": "5cabfbd593040cdad271cc95f023f62a4a8cf2e1171417ab81cdb5f4195ef389",
+      "source": "https://download.qt.io/archive/qt/6.8/CVE-2026-8168-qtsvg-6.8.zip#CVE-2026-8168-qtsvg-6.8-0009.diff",
+      "archive": "CVE-2026-8168-qtsvg-6.8.zip",
+      "archive_sha256": "3435b23c614f367f22e4d1697363aaa7dcf5581e8edf0035adc625636902ebef",
+      "upstream_date": "19-Oct-2026 14:54",
+      "added": "2026-10-25T19:17:52+00:00"
+    },
+    {
+      "file": "CVE-2026-8168-qtsvg-6.8-0010.diff",
+      "cve": "CVE-2026-8168",
+      "module": "qtsvg",
+      "sha256": "d4dd29f17a709efaf2f75825d9cf82e6749c0a9fcfad3da58cd9fa800e10f78c",
+      "source": "https://download.qt.io/archive/qt/6.8/CVE-2026-8168-qtsvg-6.8.zip#CVE-2026-8168-qtsvg-6.8-0010.diff",
+      "archive": "CVE-2026-8168-qtsvg-6.8.zip",
+      "archive_sha256": "3435b23c614f367f22e4d1697363aaa7dcf5581e8edf0035adc625636902ebef",
+      "upstream_date": "19-Oct-2026 14:54",
+      "added": "2026-10-25T19:17:52+00:00",
+      "versions": {
+        "6.8.5": {
+          "action": "apply",
+          "min_context": 2,
+          "reason": "One context line differs in 6.8.5; result identical to GNU patch -F1.",
+          "reviewed": "2026-10-25"
+        }
+      }
     },
     {
       "file": "CVE-2026-9499-qt5compat-6.8.diff",
@@ -170,7 +258,15 @@
       "sha256": "cb0729c2ee8779e71f5596763289d1c5db9e10ca8886ed5e8595e23205c014df",
       "source": "https://download.qt.io/archive/qt/6.8/CVE-2026-9499-qt5compat-6.8.diff",
       "upstream_date": "31-Jul-2026 13:23",
-      "added": "2026-10-25T18:03:10+00:00"
+      "added": "2026-10-25T18:03:10+00:00",
+      "versions": {
+        "6.8.5": {
+          "action": "apply",
+          "recount": true,
+          "reason": "Upstream file has wrong hunk line counts (git apply: corrupt patch at line 80); with --recount it applies cleanly, same result as GNU patch.",
+          "reviewed": "2026-10-25"
+        }
+      }
     },
     {
       "file": "CVE-2026-11573-qtbase-6.8.diff",
@@ -179,7 +275,14 @@
       "sha256": "ac6689afcb84a331dbffc82a0220ef7a8a59a88f3d0c32b6ce1c6841fa524974",
       "source": "https://download.qt.io/archive/qt/6.8/CVE-2026-11573-qtbase-6.8.diff",
       "upstream_date": "01-Sep-2026 13:50",
-      "added": "2026-10-25T18:03:10+00:00"
+      "added": "2026-10-25T18:03:10+00:00",
+      "versions": {
+        "6.8.5": {
+          "action": "skip",
+          "reason": "Already fixed in 6.8.5: saveSubTree() is the iterative implementation from this patch; the only difference is a redundant 'prev &&' check (prev is never null there).",
+          "reviewed": "2026-10-25"
+        }
+      }
     },
     {
       "file": "CVE-2026-19248-qtbase-6.8.diff",
@@ -188,7 +291,15 @@
       "sha256": "86c063884e0a274075f29d1aa452001cef7d7dfcee21b21eb9a7165679b4052a",
       "source": "https://download.qt.io/archive/qt/6.8/CVE-2026-19248-qtbase-6.8.diff",
       "upstream_date": "10-Sep-2026 11:43",
-      "added": "2026-10-25T18:03:10+00:00"
+      "added": "2026-10-25T18:03:10+00:00",
+      "versions": {
+        "6.8.5": {
+          "action": "apply",
+          "min_context": 1,
+          "reason": "6.8.5 has 'first = nullptr; last = nullptr;' after the replaced loop, so trailing context differs; result identical to GNU patch -F2, the extra lines stay and are harmless.",
+          "reviewed": "2026-10-25"
+        }
+      }
     },
     {
       "file": "CVE-2026-76151-qtbase-6.8.diff",
@@ -224,7 +335,15 @@
       "sha256": "45dfe852abebfee03f417c3c905bf90a3ecbe7a1c135e243ff85b693bc7e5cbf",
       "source": "https://download.qt.io/archive/qt/6.8/CVE-2026-82292-qtbase-6.8.diff",
       "upstream_date": "05-Oct-2026 08:13",
-      "added": "2026-10-25T18:03:10+00:00"
+      "added": "2026-10-25T18:03:10+00:00",
+      "versions": {
+        "6.8.5": {
+          "action": "apply",
+          "min_context": 2,
+          "reason": "One context line differs in 6.8.5; result identical to GNU patch -F1.",
+          "reviewed": "2026-10-25"
+        }
+      }
     },
     {
       "file": "CVE-2026-16762-qtbase-6.8-0001.diff",

@@ -8,7 +8,14 @@
       "sha256": "173795e7547902f6edffac56b999dce2dac1a2306c7ec0bc7416c4d949fc706f",
       "source": "https://download.qt.io/official_releases/qt/6.12/CVE-2026-101201-qtqt5compat-6.12-0001.diff",
       "upstream_date": "15-Oct-2026 10:57",
-      "added": "2026-10-25T18:03:10+00:00"
+      "added": "2026-10-25T18:03:10+00:00",
+      "versions": {
+        "6.12.0": {
+          "action": "skip",
+          "reason": "Already in 6.12.0: all 108 added lines are present; the reverse does not apply only because of later context changes.",
+          "reviewed": "2026-10-25"
+        }
+      }
     },
     {
       "file": "CVE-2026-101201-qtqt5compat-6.12-0002.diff",
