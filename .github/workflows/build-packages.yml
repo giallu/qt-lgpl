@@ -236,7 +236,6 @@ jobs:
           -qt-doubleconversion
           -nomake examples
           -nomake tests
-          -make tools
           -submodules "$SUBMODULES"
           -prefix "buildroot/$QT_NVR"
         )
@@ -253,6 +252,10 @@ jobs:
           -DCMAKE_TOOLCHAIN_FILE="$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" \
           -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }} \
           -Wno-dev 2>&1 | tee configure.log
+        # configure.bat can exit 0 even when CMake failed
+        if [ ! -f CMakeCache.txt ] || grep -q "CMake Error" configure.log; then
+          echo "::error::configure failed"; exit 1
+        fi
 
     - name: Compile and install
       shell: bash
