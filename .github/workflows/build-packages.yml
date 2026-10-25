@@ -171,11 +171,14 @@ jobs:
     - name: Download and verify Qt sources
       shell: bash
       run: |
-        file=qt-everywhere-src-$QT_VERSION.tar.xz
+        # Since 6.8.4 the delayed open-source LTS releases are named
+        # qt-everywhere-opensource-src-*; the directory inside is unchanged.
+        url=
         for location in official_releases archive; do
-          url=https://download.qt.io/$location/qt/$QT_LINE/$QT_VERSION/single/$file
-          if curl -fsSL -o "$file.sha256" "$url.sha256"; then break; fi
-          url=
+          for file in qt-everywhere-src-$QT_VERSION.tar.xz qt-everywhere-opensource-src-$QT_VERSION.tar.xz; do
+            candidate=https://download.qt.io/$location/qt/$QT_LINE/$QT_VERSION/single/$file
+            if curl -fsSL -o "$file.sha256" "$candidate.sha256"; then url=$candidate; break 2; fi
+          done
         done
         [ -n "$url" ] || { echo "::error::Qt $QT_VERSION not found on download.qt.io"; exit 1; }
 
@@ -209,6 +212,7 @@ jobs:
         "$PY" scripts/apply_patches.py \
           --src qt-everywhere-src-$QT_VERSION \
           --line $QT_LINE \
+          --qt-version $QT_VERSION \
           --modules "$SUBMODULES" \
           --report patches-$QT_NVR.md \
           --json-report patches-$QT_NVR.json
@@ -274,8 +278,14 @@ jobs:
           -prefix "buildroot/$QT_NVR"
           -sbom
         )
+        cmake_extra=()
         if [ "$(jq -r '.unity_build // false' config/build.json)" = true ]; then
           args+=(-unity-build)
+          # third-party projects that cannot be built as unity builds
+          hook="$(pwd -W 2>/dev/null || pwd)/cmake/no-unity-build.cmake"
+          for project in litehtml gumbo; do
+            cmake_extra+=("-DCMAKE_PROJECT_${project}_INCLUDE=$hook")
+          done
         fi
         if [ "$(printf '%s\n' 6.11.0 "$QT_VERSION" | sort -V | head -1)" = 6.11.0 ]; then
           args+=(-sbom-cyclonedx-v1_6)
@@ -300,6 +310,7 @@ jobs:
         "$configure" "${args[@]}" -- \
           -DFEATURE_clang=OFF \
           -DFEATURE_clangcpp=OFF \
+          "${cmake_extra[@]}" \
           -DCMAKE_TOOLCHAIN_FILE="$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" \
           -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }} \
           -Wno-dev 2>&1 | tee configure.log
@@ -457,12 +468,30 @@ jobs:
       run: |
         set -o pipefail
         ls -la dist
+        pkg="${TAG#qt-}"
+        if [ "${{ inputs.draft }}" = true ]; then
+          # Drafts cannot be "Latest"; GitHub asks when the draft is published.
+          release_flags=(--draft)
+        else
+          # Mark as Latest only if this is the highest package published so far,
+          # so a new 6.8.x does not take the label away from 6.12.x.
+          highest=$( { gh release list -R "$GITHUB_REPOSITORY" --exclude-drafts --limit 200 \
+                         --json tagName -q '.[].tagName' \
+                       | sed -n 's/^qt-\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*-[0-9][0-9]*\)$/\1/p'; echo "$pkg"; } \
+                     | sort -t- -k1,1V -k2,2n | tail -1)
+          if [ "$highest" = "$pkg" ]; then
+            release_flags=(--latest)
+          else
+            echo "Not marking as Latest: $highest is higher"
+            release_flags=(--latest=false)
+          fi
+        fi
         gh release create "$TAG" \
           -R "$GITHUB_REPOSITORY" \
           --target "$GITHUB_SHA" \
           --title "Qt $QT_VERSION (release ${{ needs.prepare.outputs.release }})" \
           --notes-file notes.md \
-          ${{ inputs.draft && '--draft' || '' }} \
+          "${release_flags[@]}" \
           dist/*.zip dist/*.tar.xz dist/*.summary dist/*.opt dist/*.cdx.json 2>&1 | tee release.log
 
     - name: Report release errors

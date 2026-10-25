@@ -31,6 +31,18 @@ def listing(*rows):
             + "".join(rows) + "</table></body></html>").encode()
 
 
+import io
+import zipfile
+
+
+def make_zip(members):
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        for name, data in members:
+            zf.writestr(name, data)
+    return buf.getvalue()
+
+
 QTBASE_DIFF = b"""diff --git a/src/hello.txt b/src/hello.txt
 --- a/src/hello.txt
 +++ b/src/hello.txt
@@ -39,6 +51,8 @@ QTBASE_DIFF = b"""diff --git a/src/hello.txt b/src/hello.txt
 +hello, patched
 """
 SHA = hashlib.sha256(QTBASE_DIFF).hexdigest()
+ZIP = make_zip([("CVE-2026-4-qtsvg-6.12-0002.diff", b"two"), ("CVE-2026-4-qtsvg-6.12-0001.diff", b"one"),
+                ("__MACOSX/._CVE-2026-4-qtsvg-6.12-0001.diff", b"junk")])
 
 CONFIG = {
     "lts_lines": ["6.12"],
@@ -71,8 +85,11 @@ class CheckUpstreamTest(unittest.TestCase):
                 row("CVE-2026-1-qtbase-6.12.diff", "15-Oct-2026 10:57"),
                 row("CVE-2026-2-qtqt5compat-6.12-0001.diff", "14-Oct-2026 10:57"),
                 row("CVE-2026-3-qtconnectivity-6.12.diff", "13-Oct-2026 10:57"),
+                row("CVE-2026-4-qtsvg-6.12-0001.diff", "01-Oct-2026 10:57"),
                 row("CVE-2026-4-qtsvg-6.12.zip", "12-Oct-2026 10:57"),
             ),
+            f"{base}/official_releases/qt/6.12/CVE-2026-4-qtsvg-6.12.zip": ZIP,
+            f"{base}/official_releases/qt/6.12/CVE-2026-4-qtsvg-6.12.zip.sha256": hashlib.sha256(ZIP).hexdigest().encode(),
             f"{base}/official_releases/qt/6.12/CVE-2026-1-qtbase-6.12.diff": QTBASE_DIFF,
             f"{base}/official_releases/qt/6.12/CVE-2026-1-qtbase-6.12.diff.sha256":
                 f"{SHA}  CVE-2026-1-qtbase-6.12.diff\n".encode(),
@@ -91,15 +108,24 @@ class CheckUpstreamTest(unittest.TestCase):
         self.assertEqual([v["version"] for v in report["new_versions"]], ["6.12.1"])
         self.assertEqual(check_upstream.builds_to_dispatch(CONFIG, report), ["6.12.1"])
         # qtqt5compat is resolved to the qt5compat module directory
-        self.assertEqual({p["module"] for p in report["new_patches"]}, {"qtbase", "qt5compat"})
+        self.assertEqual({p["module"] for p in report["new_patches"]}, {"qtbase", "qt5compat", "qtsvg"})
         self.assertEqual([p["file"] for p in report["not_built"]], ["CVE-2026-3-qtconnectivity-6.12.diff"])
-        self.assertEqual([p["file"] for p in report["manual_review"]], ["CVE-2026-4-qtsvg-6.12.zip"])
+        self.assertEqual(report["manual_review"], [])
+        # the loose diff of CVE-2026-4 is superseded by the zip series, never downloaded
+        self.assertEqual([p["file"] for p in report["superseded"]], ["CVE-2026-4-qtsvg-6.12-0001.diff"])
+        self.assertNotIn("https://download.qt.io/official_releases/qt/6.12/CVE-2026-4-qtsvg-6.12-0001.diff",
+                         self.site.requested)
         self.assertEqual(report["errors"], [])
         self.assertEqual(report["new_lines"], [])  # bootstrap: known_lines was null
         lock = json.loads((self.tmp / "patches/6.12/patches.json").read_text())
         # oldest upstream date first
         self.assertEqual([p["file"] for p in lock["patches"]],
-                         ["CVE-2026-2-qtqt5compat-6.12-0001.diff", "CVE-2026-1-qtbase-6.12.diff"])
+                         ["CVE-2026-4-qtsvg-6.12-0001.diff", "CVE-2026-4-qtsvg-6.12-0002.diff",
+                          "CVE-2026-2-qtqt5compat-6.12-0001.diff", "CVE-2026-1-qtbase-6.12.diff"])
+        self.assertEqual((self.tmp / "patches/6.12/CVE-2026-4-qtsvg-6.12-0001.diff").read_bytes(), b"one")
+        zentry = lock["patches"][0]
+        self.assertEqual(zentry["archive"], "CVE-2026-4-qtsvg-6.12.zip")
+        self.assertEqual(zentry["sha256"], hashlib.sha256(b"one").hexdigest())
         self.assertEqual((self.tmp / "patches/6.12/CVE-2026-1-qtbase-6.12.diff").read_bytes(), QTBASE_DIFF)
 
     def test_second_run_is_quiet(self):
@@ -134,6 +160,32 @@ class CheckUpstreamTest(unittest.TestCase):
         self.assertEqual([p["file"] for p in report["changed_patches"]], ["CVE-2026-1-qtbase-6.12.diff"])
 
 
+    def test_zip_replaces_previously_staged_loose_diffs(self):
+        # a loose diff staged by an earlier run, before the zip existed
+        check_upstream.stage_patch(self.tmp / "patches", "6.12", {
+            "file": "CVE-2026-4-qtsvg-6.12-0001.diff", "cve": "CVE-2026-4", "module": "qtsvg",
+            "sha256": "x", "source": "loose"}, b"old loose")
+        check_upstream.stage_patch(self.tmp / "patches", "6.12", {
+            "file": "CVE-2026-4-qtsvg-6.12-0009.diff", "cve": "CVE-2026-4", "module": "qtsvg",
+            "sha256": "y", "source": "loose"}, b"old loose 9")
+        self.run_check()
+        d = self.tmp / "patches/6.12"
+        self.assertFalse((d / "CVE-2026-4-qtsvg-6.12-0009.diff").exists())
+        self.assertEqual((d / "CVE-2026-4-qtsvg-6.12-0001.diff").read_bytes(), b"one")
+        lock = json.loads((d / "patches.json").read_text())
+        names = [p["file"] for p in lock["patches"]]
+        self.assertEqual(names[:2], ["CVE-2026-4-qtsvg-6.12-0001.diff", "CVE-2026-4-qtsvg-6.12-0002.diff"])
+
+    def test_zip_with_unexpected_member_needs_review(self):
+        bad = make_zip([("../evil.diff", b"x")])
+        base = "https://download.qt.io/official_releases/qt/6.12/"
+        self.site.pages[base + "CVE-2026-4-qtsvg-6.12.zip"] = bad
+        self.site.pages[base + "CVE-2026-4-qtsvg-6.12.zip.sha256"] = hashlib.sha256(bad).hexdigest().encode()
+        report = self.run_check()
+        self.assertEqual([p["file"] for p in report["manual_review"]], ["CVE-2026-4-qtsvg-6.12.zip"])
+        self.assertFalse((self.tmp / "patches/6.12/evil.diff").exists())
+
+
 class ApplyPatchesTest(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
@@ -149,7 +201,7 @@ class ApplyPatchesTest(unittest.TestCase):
         (self.pdir / "patches.json").write_text(json.dumps({"line": "6.12", "patches": patches}))
 
     def run_apply(self, modules="qtbase"):
-        return apply_patches.main(["--src", str(self.src), "--line", "6.12", "--modules", modules,
+        return apply_patches.main(["--src", str(self.src), "--line", "6.12", "--qt-version", "6.12.0", "--modules", modules,
                                    "--patches-dir", str(self.tmp / "patches"),
                                    "--report", str(self.tmp / "report.md"),
                                    "--json-report", str(self.tmp / "report.json")])
@@ -181,6 +233,66 @@ class ApplyPatchesTest(unittest.TestCase):
 
     def test_unlisted_patch_fails(self):
         (self.pdir / "evil.diff").write_bytes(QTBASE_DIFF)
+        self.assertEqual(self.run_apply(), 1)
+
+    def test_conflict_needs_decision_then_skip(self):
+        (self.src / "qtbase/src/hello.txt").write_text("something else\n")
+        self.assertEqual(self.run_apply(), 1)
+        self.write_lock([{"file": "a.diff", "module": "qtbase", "cve": "CVE-1", "sha256": SHA,
+                          "source": "s", "versions": {"6.12.0": {"action": "skip", "reason": "fixed differently"}}}])
+        self.assertEqual(self.run_apply(), 0)
+        self.assertIn("| skipped | fixed differently |", (self.tmp / "report.md").read_text())
+
+    def test_decision_for_other_version_is_ignored(self):
+        (self.src / "qtbase/src/hello.txt").write_text("something else\n")
+        self.write_lock([{"file": "a.diff", "module": "qtbase", "cve": "CVE-1", "sha256": SHA,
+                          "source": "s", "versions": {"6.12.1": {"action": "skip", "reason": "x"}}}])
+        self.assertEqual(self.run_apply(), 1)
+
+    def test_apply_with_reduced_context(self):
+        diff = (b"diff --git a/src/f.txt b/src/f.txt\n--- a/src/f.txt\n+++ b/src/f.txt\n"
+                b"@@ -1,3 +1,3 @@\n ctx1\n-old\n+new\n ctx3\n")
+        (self.src / "qtbase/src/f.txt").write_text("CHANGED\nold\nctx3\n")
+        (self.pdir / "a.diff").write_bytes(diff)
+        sha = hashlib.sha256(diff).hexdigest()
+        self.write_lock([{"file": "a.diff", "module": "qtbase", "cve": "CVE-1", "sha256": sha, "source": "s"}])
+        self.assertEqual(self.run_apply(), 1)
+        self.write_lock([{"file": "a.diff", "module": "qtbase", "cve": "CVE-1", "sha256": sha, "source": "s",
+                          "versions": {"6.12.0": {"action": "apply", "min_context": 0, "reason": "ctx drift"}}}])
+        self.assertEqual(self.run_apply(), 0)
+        self.assertEqual((self.src / "qtbase/src/f.txt").read_text(), "CHANGED\nnew\nctx3\n")
+
+    def test_backport_replaces_upstream_patch(self):
+        (self.src / "qtbase/src/hello.txt").write_text("hello\nmore\n")
+        upstream = (b"diff --git a/src/hello.txt b/src/hello.txt\n--- a/src/hello.txt\n+++ b/src/hello.txt\n"
+                    b"@@ -1,2 +1,2 @@\n-hello\n+hello, patched\n different\n")
+        (self.pdir / "a.diff").write_bytes(upstream)
+        (self.pdir / "backports").mkdir()
+        bp = (b"diff --git a/src/hello.txt b/src/hello.txt\n--- a/src/hello.txt\n+++ b/src/hello.txt\n"
+              b"@@ -1,2 +1,2 @@\n-hello\n+hello, patched\n more\n")
+        (self.pdir / "backports/a-backport.diff").write_bytes(bp)
+        entry = {"file": "a.diff", "module": "qtbase", "cve": "CVE-1", "source": "s",
+                 "sha256": hashlib.sha256(upstream).hexdigest()}
+        self.write_lock([entry])
+        self.assertEqual(self.run_apply(), 1)  # upstream conflicts
+        entry["versions"] = {"6.12.0": {"action": "backport", "file": "backports/a-backport.diff",
+                                        "sha256": hashlib.sha256(bp).hexdigest(), "reason": "context"}}
+        self.write_lock([entry])
+        self.assertEqual(self.run_apply(), 0)
+        self.assertEqual((self.src / "qtbase/src/hello.txt").read_text(), "hello, patched\nmore\n")
+        self.assertIn("applied (backport)", (self.tmp / "report.md").read_text())
+        # tampered backport is refused
+        (self.pdir / "backports/a-backport.diff").write_bytes(bp + b" \n")
+        self.assertEqual(self.run_apply(), 1)
+
+    def test_orphan_backport_fails(self):
+        (self.pdir / "backports").mkdir()
+        (self.pdir / "backports/x.diff").write_bytes(b"x")
+        self.assertEqual(self.run_apply(), 1)
+
+    def test_decision_without_reason_is_rejected(self):
+        self.write_lock([{"file": "a.diff", "module": "qtbase", "cve": "CVE-1", "sha256": SHA,
+                          "source": "s", "versions": {"6.12.0": {"action": "skip"}}}])
         self.assertEqual(self.run_apply(), 1)
 
     def test_module_not_built_is_skipped(self):

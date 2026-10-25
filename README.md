@@ -96,7 +96,7 @@ see [this sample repo](https://github.com/giallu/qt-test-ssl) for a working matr
 
 ## Maintaining this repository
 
-- `Build Qt` workflow: run manually with a Qt version (e.g. `6.12.0`) to produce a draft release; it is also started automatically for new patch releases and after security patches are merged.
+- `Build Qt` workflow: run manually with a Qt version (e.g. `6.12.0`) to produce a draft release; it is also started automatically for new patch releases and after security patches are merged. Releases are created only from `main`; builds from other branches keep their packages as run artifacts. Non-draft releases are marked *Latest* only when they are the highest version published; when publishing a draft of an older line (e.g. 6.8 after 6.12), untick *Set as the latest release*.
 - Build speed: OpenSSL comes from a vcpkg binary cache (rebuilt only when the runner's vcpkg changes) and Qt is compiled as a unity build (`"unity_build": true` in `config/build.json`; set it to `false` if a module ever fails to build that way).
 - `Check upstream Qt` workflow: the daily check described above. It needs *Settings → Actions → General → Allow GitHub Actions to create and approve pull requests* to open patch PRs.
 - `Test action` workflow: installs a published package with the action on Windows, Ubuntu 22.04/24.04 and macOS, then builds and runs a small app (`tests/smoke-app`) checking SVG, QML, TLS and an HTTPS request. Runs automatically when a release is published.
