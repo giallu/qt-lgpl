@@ -130,6 +130,6 @@ jobs:
             if [ -z "$version" ]; then
               echo "::warning::No known release for Qt $line"; continue
             fi
-            echo "Rebuilding Qt $version with the patches of Qt $line"
-            gh workflow run build-packages.yml -f qt-version="$version"
+            echo "Rebuilding Qt $version with the patches of Qt $line (skipped if the applied patches do not change)"
+            gh workflow run build-packages.yml -f qt-version="$version" -f only-if-patches-changed=true
           done

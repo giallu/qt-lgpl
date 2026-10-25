@@ -17,6 +17,11 @@ on:
         required: false
         type: boolean
         default: true
+      only-if-patches-changed:
+        description: 'Skip the build if the applied patches are the same as in the latest release of this Qt version (used by automatic rebuilds)'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -29,8 +34,11 @@ jobs:
   prepare:
     runs-on: ubuntu-24.04
     permissions:
-      contents: read
+      # write only because GitHub hides draft releases from read-only tokens:
+      # package release numbers and patch comparisons must see drafts too
+      contents: write
     outputs:
+      build: ${{ steps.changes.outputs.build }}
       qt-version: ${{ steps.vars.outputs.qt-version }}
       qt-line: ${{ steps.vars.outputs.qt-line }}
       release: ${{ steps.vars.outputs.release }}
@@ -76,8 +84,42 @@ jobs:
             echo "submodules-windows=$(jq -r '(.submodules + .submodules_windows) | join(",")' config/build.json)"
           } | tee -a "$GITHUB_OUTPUT"
 
+
+      - name: Compare patches with the latest release
+        id: changes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          QT_VERSION: ${{ inputs.qt-version }}
+          ONLY_IF_CHANGED: ${{ inputs.only-if-patches-changed }}
+          SUBMODULES: ${{ steps.vars.outputs.submodules }}
+        run: |
+          build=true
+          if [ "$ONLY_IF_CHANGED" = true ]; then
+            prev=$(gh release list -R "$GITHUB_REPOSITORY" --limit 200 --json tagName -q '.[].tagName' \
+                   | sed -n "s/^qt-${QT_VERSION//./\\.}-\([0-9][0-9]*\)$/\1/p" | sort -n | tail -1)
+            report="patches-qt-$QT_VERSION-$prev-ubuntu2204.json"
+            if [ -z "$prev" ]; then
+              echo "No previous release of Qt $QT_VERSION: building."
+            elif ! gh release download "qt-$QT_VERSION-$prev" -R "$GITHUB_REPOSITORY" -p "$report" -D prev; then
+              echo "qt-$QT_VERSION-$prev has no patch report: building."
+            else
+              mkdir src && cd src
+              ../scripts/fetch_qt_source.sh "$QT_VERSION"
+              python3 ../scripts/apply_patches.py --src "qt-everywhere-src-$QT_VERSION" \
+                --line "${QT_VERSION%.*}" --qt-version "$QT_VERSION" --modules "$SUBMODULES" \
+                --patches-dir ../patches --json-report ../new-patches.json
+              cd ..
+              if python3 scripts/compare_patch_sets.py "prev/$report" new-patches.json; then
+                build=false
+                echo "### Build skipped" >> "$GITHUB_STEP_SUMMARY"
+                echo "The applied patches are the same as in qt-$QT_VERSION-$prev: a rebuild would produce the same packages." >> "$GITHUB_STEP_SUMMARY"
+              fi
+            fi
+          fi
+          echo "build=$build" >> "$GITHUB_OUTPUT"
   build:
     needs: prepare
+    if: needs.prepare.outputs.build == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -171,40 +213,9 @@ jobs:
     - name: Download and verify Qt sources
       shell: bash
       run: |
-        # Since 6.8.4 the delayed open-source LTS releases are named
-        # qt-everywhere-opensource-src-*; the directory inside is unchanged.
-        url=
-        for location in official_releases archive; do
-          for file in qt-everywhere-src-$QT_VERSION.tar.xz qt-everywhere-opensource-src-$QT_VERSION.tar.xz; do
-            candidate=https://download.qt.io/$location/qt/$QT_LINE/$QT_VERSION/single/$file
-            if curl -fsSL -o "$file.sha256" "$candidate.sha256"; then url=$candidate; break 2; fi
-          done
-        done
-        [ -n "$url" ] || { echo "::error::Qt $QT_VERSION not found on download.qt.io"; exit 1; }
-
-        # The .sha256 is served by download.qt.io itself; the tarball may come
-        # from a mirror, so it is checked against that published hash.
-        expected=$(grep -oE '[0-9a-f]{64}' "$file.sha256" | head -1)
-        [ -n "$expected" ] || { echo "::error::no SHA-256 published for $url"; exit 1; }
-        echo "Downloading $url (expected sha256 $expected)"
-        curl -fL --retry 3 -o "$file" "$url"
         PY=$(command -v python3 || command -v python)
         echo "PY=$PY" >> "$GITHUB_ENV"
-        "$PY" - "$file" "$expected" <<'EOF'
-        import hashlib, sys
-        path, expected = sys.argv[1], sys.argv[2]
-        h = hashlib.sha256()
-        with open(path, "rb") as f:
-            for chunk in iter(lambda: f.read(1 << 20), b""):
-                h.update(chunk)
-        if h.hexdigest() != expected:
-            sys.exit(f"SHA-256 mismatch for {path}: got {h.hexdigest()}, expected {expected}")
-        print(f"SHA-256 OK: {expected}")
-        EOF
-        echo "QT_SRC_SHA256=$expected" >> "$GITHUB_ENV"
-        echo "QT_SRC_URL=$url" >> "$GITHUB_ENV"
-        tar xf "$file"
-        rm "$file"
+        PY="$PY" scripts/fetch_qt_source.sh "$QT_VERSION"
 
     - name: Apply reviewed security patches
       shell: bash
@@ -392,6 +403,9 @@ jobs:
           --vcpkg-list vcpkg-openssl.txt \
           --repo "$GITHUB_REPOSITORY" \
           --output "dist/sbom-extras-$QT_NVR.cdx.json"
+        # machine-readable patch report: lets later automatic rebuilds tell
+        # whether anything changed
+        cp "patches-$QT_NVR.json" dist/
 
     - name: Upload build output
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -513,7 +527,7 @@ jobs:
           --title "Qt $QT_VERSION (release ${{ needs.prepare.outputs.release }})" \
           --notes-file notes.md \
           "${release_flags[@]}" \
-          dist/*.zip dist/*.tar.xz dist/*.summary dist/*.opt dist/*.cdx.json 2>&1 | tee release.log
+          dist/*.zip dist/*.tar.xz dist/*.summary dist/*.opt dist/*.cdx.json dist/patches-*.json 2>&1 | tee release.log
 
     - name: Report release errors
       if: failure()

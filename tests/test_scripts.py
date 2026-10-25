@@ -17,6 +17,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import apply_patches  # noqa: E402
 import check_upstream  # noqa: E402
 import make_sbom_extras  # noqa: E402
+import compare_patch_sets  # noqa: E402
 
 
 def row(name, date, size="1.0K"):
@@ -308,6 +309,23 @@ class ApplyPatchesTest(unittest.TestCase):
         subprocess.run(["git", "init", "-q", str(self.tmp)], check=True)
         self.assertEqual(self.run_apply(), 0)
         self.assertEqual((self.src / "qtbase/src/hello.txt").read_text(), "hello, patched\n")
+
+
+class ComparePatchSetsTest(unittest.TestCase):
+    def write(self, name, patches):
+        path = Path(tempfile.mkdtemp()) / name
+        path.write_text(json.dumps({"patches": patches}))
+        return str(path)
+
+    def test_same_and_different(self):
+        a = {"file": "a.diff", "sha256": "1", "status": "applied"}
+        b = {"file": "b.diff", "sha256": "2", "status": "applied (backport)"}
+        skipped = {"file": "c.diff", "sha256": "3", "status": "already in this release"}
+        prev = self.write("prev.json", [a, skipped])
+        self.assertEqual(compare_patch_sets.main([prev, self.write("n1.json", [a])]), 0)
+        self.assertEqual(compare_patch_sets.main([prev, self.write("n2.json", [a, b])]), 1)
+        changed = {**a, "sha256": "9"}
+        self.assertEqual(compare_patch_sets.main([prev, self.write("n3.json", [changed])]), 1)
 
 
 if __name__ == "__main__":
