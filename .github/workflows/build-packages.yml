@@ -209,7 +209,8 @@ jobs:
           --src qt-everywhere-src-$QT_VERSION \
           --line $QT_LINE \
           --modules "$SUBMODULES" \
-          --report patches-$QT_NVR.md
+          --report patches-$QT_NVR.md \
+          --json-report patches-$QT_NVR.json
 
     - name: Set up vcpkg
       shell: bash
@@ -224,6 +225,20 @@ jobs:
       shell: bash
       run: |
         "$VCPKG_INSTALLATION_ROOT/vcpkg" install openssl --triplet=${{ matrix.triplet }}
+        "$VCPKG_INSTALLATION_ROOT/vcpkg" list openssl | tee vcpkg-openssl.txt
+
+    # Qt >= 6.11 can also write CycloneDX SBOMs; that needs these Python
+    # packages. A venv keeps it working on runners with an externally managed
+    # Python (macOS/Homebrew). If this fails, Qt still writes SPDX SBOMs.
+    - name: Set up Python for Qt SBOM generation
+      shell: bash
+      run: |
+        "$PY" -m venv "$RUNNER_TEMP/sbomvenv"
+        bin="$RUNNER_TEMP/sbomvenv/bin"
+        [ "$RUNNER_OS" = Windows ] && bin="$RUNNER_TEMP/sbomvenv/Scripts"
+        "$bin/python" -m pip install --quiet 'cyclonedx-python-lib[json-validation]' tomli \
+          && echo "$bin" >> "$GITHUB_PATH" \
+          || echo "::warning::CycloneDX dependencies not installed; only SPDX SBOMs will be generated"
 
     - name: Configure build
       shell: bash
@@ -242,7 +257,11 @@ jobs:
           -nomake tests
           -submodules "$SUBMODULES"
           -prefix "buildroot/$QT_NVR"
+          -sbom
         )
+        if [ "$(printf '%s\n' 6.11.0 "$QT_VERSION" | sort -V | head -1)" = 6.11.0 ]; then
+          args+=(-sbom-cyclonedx-v1_6)
+        fi
         configure=qt-everywhere-src-$QT_VERSION/configure
         if [ "$RUNNER_OS" = Windows ]; then
           configure+=.bat
@@ -301,6 +320,34 @@ jobs:
         mv patches-$QT_NVR.md dist/
         echo "$QT_SRC_SHA256  $QT_SRC_URL" > dist/source-$QT_NVR.sha256
 
+    - name: Collect SBOMs
+      shell: bash
+      run: |
+        # Qt's own SBOMs (SPDX, plus CycloneDX for Qt >= 6.11), installed with Qt
+        "$PY" - "buildroot/$QT_NVR" "dist/sbom-$QT_NVR.zip" <<'EOF'
+        import sys, zipfile
+        from pathlib import Path
+        root, out = Path(sys.argv[1]), sys.argv[2]
+        files = [p for p in root.rglob("*") if p.is_file() and
+                 (p.name.endswith((".spdx", ".spdx.json", ".cdx.json")))]
+        if not files:
+            print("::warning::Qt did not install any SBOM files")
+        with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
+            for p in files:
+                z.write(p, p.relative_to(root))
+        print(f"{len(files)} SBOM files -> {out}")
+        EOF
+        # what we add on top: verified source, applied CVE patches, OpenSSL
+        "$PY" scripts/make_sbom_extras.py \
+          --package "$QT_NVR" \
+          --qt-version "$QT_VERSION" \
+          --source-url "$QT_SRC_URL" \
+          --source-sha256 "$QT_SRC_SHA256" \
+          --patches "patches-$QT_NVR.json" \
+          --vcpkg-list vcpkg-openssl.txt \
+          --repo "$GITHUB_REPOSITORY" \
+          --output "dist/sbom-extras-$QT_NVR.cdx.json"
+
     - name: Upload build output
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
@@ -353,6 +400,11 @@ jobs:
           sha256sum *.zip *.tar.xz
           echo '```'
           echo
+          echo "## SBOM"
+          echo
+          echo "- \`sbom-<package>.zip\`: Qt's own SBOMs (SPDX 2.3; CycloneDX 1.6 for Qt 6.11+), also installed in each package"
+          echo "- \`sbom-extras-<package>.cdx.json\`: verified upstream source, applied CVE patches and the bundled OpenSSL"
+          echo
           echo "Verify provenance with: \`gh attestation verify <file> --repo $GITHUB_REPOSITORY\`"
         } > ../notes.md
         cat ../notes.md
@@ -367,4 +419,4 @@ jobs:
           --title "Qt $QT_VERSION (release ${{ needs.prepare.outputs.release }})" \
           --notes-file notes.md \
           ${{ inputs.draft && '--draft' || '' }} \
-          dist/*.zip dist/*.tar.xz dist/*.summary dist/*.opt
+          dist/*.zip dist/*.tar.xz dist/*.summary dist/*.opt dist/*.cdx.json

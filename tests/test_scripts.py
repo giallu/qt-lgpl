@@ -16,6 +16,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import apply_patches  # noqa: E402
 import check_upstream  # noqa: E402
+import make_sbom_extras  # noqa: E402
 
 
 def row(name, date, size="1.0K"):
@@ -142,7 +143,7 @@ class ApplyPatchesTest(unittest.TestCase):
         self.pdir = self.tmp / "patches/6.12"
         self.pdir.mkdir(parents=True)
         (self.pdir / "a.diff").write_bytes(QTBASE_DIFF)
-        self.write_lock([{"file": "a.diff", "module": "qtbase", "cve": "CVE-1", "sha256": SHA}])
+        self.write_lock([{"file": "a.diff", "module": "qtbase", "cve": "CVE-1", "sha256": SHA, "source": "https://example.invalid/a.diff"}])
 
     def write_lock(self, patches):
         (self.pdir / "patches.json").write_text(json.dumps({"line": "6.12", "patches": patches}))
@@ -150,7 +151,22 @@ class ApplyPatchesTest(unittest.TestCase):
     def run_apply(self, modules="qtbase"):
         return apply_patches.main(["--src", str(self.src), "--line", "6.12", "--modules", modules,
                                    "--patches-dir", str(self.tmp / "patches"),
-                                   "--report", str(self.tmp / "report.md")])
+                                   "--report", str(self.tmp / "report.md"),
+                                   "--json-report", str(self.tmp / "report.json")])
+
+    def test_json_report_feeds_sbom(self):
+        self.assertEqual(self.run_apply(), 0)
+        (self.tmp / "vcpkg.txt").write_text("openssl:x64-linux   3.5.2#1   TLS/SSL and crypto library\n")
+        out = self.tmp / "extras.cdx.json"
+        make_sbom_extras.main(["--package", "qt-6.12.0-1-ubuntu2204", "--qt-version", "6.12.0",
+                               "--source-url", "https://example.invalid/qt.tar.xz", "--source-sha256", "0" * 64,
+                               "--patches", str(self.tmp / "report.json"),
+                               "--vcpkg-list", str(self.tmp / "vcpkg.txt"), "--output", str(out)])
+        bom = json.loads(out.read_text())
+        self.assertEqual(bom["specVersion"], "1.6")
+        qt, openssl = bom["components"]
+        self.assertEqual(openssl["version"], "3.5.2")
+        self.assertEqual([p["resolves"][0]["id"] for p in qt["pedigree"]["patches"]], ["CVE-1"])
 
     def test_applies_then_detects_already_present(self):
         self.assertEqual(self.run_apply(), 0)

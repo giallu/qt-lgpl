@@ -49,12 +49,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--modules", required=True, help="comma separated submodules being built")
     parser.add_argument("--patches-dir", default="patches", type=Path)
     parser.add_argument("--report", type=Path, help="write a markdown report here")
+    parser.add_argument("--json-report", type=Path, help="write a JSON report here (used for the SBOM)")
     args = parser.parse_args(argv)
 
     line_dir = args.patches_dir / args.line
     lock_path = line_dir / "patches.json"
     modules = {m.strip() for m in args.modules.split(",") if m.strip()}
     rows: list[tuple[str, str, str, str]] = []
+    results: list[dict] = []
 
     if not lock_path.exists():
         unlisted = sorted(p.name for p in line_dir.glob("*") if p.suffix in PATCH_SUFFIXES) if line_dir.exists() else []
@@ -64,6 +66,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"No patches for Qt {args.line}.")
         if args.report:
             args.report.write_text(f"No security patches applied on top of upstream Qt {args.line}.\n")
+        if args.json_report:
+            args.json_report.write_text(json.dumps({"line": args.line, "patches": []}) + "\n")
         return 0
 
     lock = json.loads(lock_path.read_text())
@@ -102,6 +106,7 @@ def main(argv: list[str] | None = None) -> int:
             failed = True
         print(f"{status:<28} {name}")
         rows.append((cve, module, name, status))
+        results.append({**entry, "status": status})
 
     if args.report:
         lines = [
@@ -113,6 +118,8 @@ def main(argv: list[str] | None = None) -> int:
             "",
         ]
         args.report.write_text("\n".join(lines))
+    if args.json_report:
+        args.json_report.write_text(json.dumps({"line": args.line, "patches": results}, indent=2) + "\n")
     return 1 if failed else 0
 
 
