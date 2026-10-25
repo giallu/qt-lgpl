@@ -223,34 +223,60 @@ jobs:
 
     - name: Configure build
       shell: bash
-      run: >
-        qt-everywhere-src-$QT_VERSION/configure${{ runner.os == 'Windows' && '.bat' || '' }}
-        -cmake-generator Ninja
-        -openssl-linked
-        -release
-        -qt-libjpeg
-        -qt-libpng
-        -qt-zlib
-        -qt-pcre
-        -qt-harfbuzz
-        -qt-doubleconversion
-        -nomake examples
-        -nomake tests
-        -make tools
-        ${{ runner.os == 'Windows' && '-opengl dynamic' || '' }}
-        ${{ runner.os == 'Linux' && '-no-use-gold-linker' || '' }}
-        -submodules $SUBMODULES
-        -prefix buildroot/$QT_NVR
-        --
-        -DCMAKE_TOOLCHAIN_FILE="${VCPKG_INSTALLATION_ROOT}/scripts/buildsystems/vcpkg.cmake"
-        -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }}
-        -Wno-dev
+      run: |
+        args=(
+          -cmake-generator Ninja
+          -openssl-linked
+          -release
+          -qt-libjpeg
+          -qt-libpng
+          -qt-zlib
+          -qt-pcre
+          -qt-harfbuzz
+          -qt-doubleconversion
+          -nomake examples
+          -nomake tests
+          -make tools
+          -submodules "$SUBMODULES"
+          -prefix "buildroot/$QT_NVR"
+        )
+        configure=qt-everywhere-src-$QT_VERSION/configure
+        if [ "$RUNNER_OS" = Windows ]; then
+          configure+=.bat
+          args+=(-opengl dynamic)
+        fi
+        if [ "$RUNNER_OS" = Linux ]; then
+          args+=(-no-use-gold-linker)
+        fi
+        set -o pipefail
+        "$configure" "${args[@]}" -- \
+          -DCMAKE_TOOLCHAIN_FILE="$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" \
+          -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }} \
+          -Wno-dev 2>&1 | tee configure.log
 
     - name: Compile and install
       shell: bash
       run: |
-         cmake --build . --parallel
-         cmake --install .
+        set -o pipefail
+        cmake --build . --parallel 2>&1 | tee build.log
+        cmake --install .
+
+    # Surface the reason for a failure as annotations on the run page,
+    # so it is visible without opening (or downloading) the full log.
+    - name: Report build errors
+      if: failure()
+      shell: bash
+      run: |
+        for f in configure.log build.log; do
+          [ -f "$f" ] || continue
+          {
+            grep -E "CMake Error|ERROR|[Ee]rror:|FAILED:|Unknown|unknown" "$f" | head -20
+            echo "----- last lines of $f -----"
+            tail -30 "$f"
+          } > "$f.excerpt"
+          msg=$(tr -d '\r' < "$f.excerpt" | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}')
+          echo "::error title=${{ matrix.os }} $f::$msg"
+        done
 
     - name: Create archive
       shell: bash
