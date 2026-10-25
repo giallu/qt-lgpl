@@ -22,7 +22,11 @@ Only Qt **LTS** lines are built, for Windows (x64), Linux (x64, built on Ubuntu 
 | **6.12 LTS** | built | Open-source patch releases are published while 6.12 is new. |
 | **6.8 LTS** | built | The newest 6.8 patch releases are commercial-only; their sources become available to open-source users later (6.8.5 was published in October 2026). Upstream security patches are applied on top. |
 
-Modules: qtbase, qtimageformats, qtdeclarative, qtsvg, qtremoteobjects (+ qtactiveqt on Windows). The list lives in [`config/build.json`](config/build.json).
+Modules (Qt submodules): qtbase, qtimageformats, qtdeclarative, qtsvg, qtremoteobjects, qttools, qttranslations, qtshadertools, qt5compat, qtwebsockets, qtwebchannel, qtserialport, qtserialbus, qtscxml (+ qtactiveqt on Windows). The list lives in [`config/build.json`](config/build.json).
+
+Tools (moc, rcc, uic, qmake, windeployqt/macdeployqt, Designer, Linguist, Assistant, ...) are included. Qt licenses its tools under the GPL with the Qt GPL exception, which allows using them to build applications under any license.
+
+**Note:** `qtdeclarative` also contains the *Qt Qml Compiler* library (`QtQmlCompiler`), which Qt makes available as open source under the GPL only. It is used by tools such as `qmllint` and `qmlsc`; do not link your application against it if you rely on the LGPL.
 
 ### Security patches
 

@@ -7,6 +7,12 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QPainter>
+#include <QRegExp>
+#include <QSerialPortInfo>
+#include <QState>
+#include <QStateMachine>
+#include <QUiLoader>
+#include <QWebSocket>
 #include <QSslSocket>
 #include <QSvgRenderer>
 #include <QTimer>
@@ -43,6 +49,17 @@ int main(int argc, char *argv[])
     // QtQml
     QJSEngine engine;
     check(engine.evaluate("6 * 7").toInt() == 42, "JavaScript engine");
+
+    // a few of the add-on modules
+    check(QRegExp("^q(t)?$").exactMatch("qt"), "Core5Compat (QRegExp)");
+    QStateMachine machine;
+    auto *state = new QState(&machine);
+    machine.setInitialState(state);
+    check(machine.initialState() == state, "StateMachine");
+    check(!QUiLoader().availableWidgets().isEmpty(), "UiTools", QString::number(QUiLoader().availableWidgets().size()) + " widgets");
+    QWebSocket socket;
+    check(socket.state() == QAbstractSocket::UnconnectedState, "WebSockets");
+    check(true, "SerialPort", QString::number(QSerialPortInfo::availablePorts().size()) + " ports");
 
     // TLS backend (OpenSSL is linked into this build)
     check(QSslSocket::supportsSsl(), "TLS support",

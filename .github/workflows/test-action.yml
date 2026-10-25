@@ -56,6 +56,22 @@ jobs:
         with:
           qt-version: ${{ steps.pkg.outputs.version }}
 
+      - name: Check tools
+        shell: bash
+        run: |
+          missing=0
+          deploy=windeployqt; [ "$RUNNER_OS" = macOS ] && deploy=macdeployqt
+          tools="moc rcc uic qmake lrelease lupdate designer"
+          [ "$RUNNER_OS" != Linux ] && tools="$tools $deploy"
+          for t in $tools; do
+            if command -v "$t" >/dev/null || [ -e "${{ steps.qt.outputs.qt-dir }}/bin/$t.app" ]; then
+              echo "[ OK ] $t"
+            else
+              echo "::error::$t not found in the package"; missing=1
+            fi
+          done
+          exit $missing
+
       - name: Build smoke app
         shell: bash
         run: |

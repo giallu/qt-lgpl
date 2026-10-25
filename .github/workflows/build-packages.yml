@@ -271,7 +271,12 @@ jobs:
           args+=(-no-use-gold-linker)
         fi
         set -o pipefail
+        # FEATURE_clang*: qttools would otherwise pick up whatever libclang the
+        # runner has (e.g. Homebrew LLVM on macOS) for qdoc/lupdate, making the
+        # package depend on it at run time.
         "$configure" "${args[@]}" -- \
+          -DFEATURE_clang=OFF \
+          -DFEATURE_clangcpp=OFF \
           -DCMAKE_TOOLCHAIN_FILE="$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" \
           -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }} \
           -Wno-dev 2>&1 | tee configure.log

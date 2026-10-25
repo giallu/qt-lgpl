@@ -1,7 +1,27 @@
 {
   "_comment": "Single source of truth for what gets built and watched. Used by build-packages.yml and scripts/check_upstream.py.",
-  "lts_lines": ["6.12", "6.8"],
-  "submodules": ["qtbase", "qtimageformats", "qtdeclarative", "qtsvg", "qtremoteobjects"],
-  "submodules_windows": ["qtactiveqt"],
+  "lts_lines": [
+    "6.12",
+    "6.8"
+  ],
+  "submodules": [
+    "qtbase",
+    "qtimageformats",
+    "qtdeclarative",
+    "qtsvg",
+    "qtremoteobjects",
+    "qttools",
+    "qttranslations",
+    "qtshadertools",
+    "qt5compat",
+    "qtwebsockets",
+    "qtwebchannel",
+    "qtserialport",
+    "qtserialbus",
+    "qtscxml"
+  ],
+  "submodules_windows": [
+    "qtactiveqt"
+  ],
   "auto_build_new_versions": true
 }
