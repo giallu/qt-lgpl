@@ -1,6 +1,6 @@
 {
   "_comment": "Maintained by .github/workflows/check-upstream.yml. Records what has already been seen on download.qt.io so only real changes are reported.",
-  "last_committed": "2026-10-25T18:03:53+00:00",
+  "last_committed": "2026-10-25T19:17:56+00:00",
   "known_lines": [
     "6.10",
     "6.11",
@@ -136,37 +136,32 @@
           "first_seen": "2026-10-25T18:03:10+00:00"
         },
         "CVE-2026-8168-qtsvg-6.8-0000.diff": {
-          "kind": "patch",
-          "module": "qtsvg",
-          "sha256": "51e249f61dd5f3da75d2f8efae700375ddfa5e7e90d0c384b3dc6afde034d2c1",
+          "kind": "superseded",
+          "by": "CVE-2026-8168-qtsvg-6.8.zip",
           "upstream_date": "24-Jul-2026 19:21",
           "first_seen": "2026-10-25T18:03:10+00:00"
         },
         "CVE-2026-8168-qtsvg-6.8-0001.diff": {
-          "kind": "patch",
-          "module": "qtsvg",
-          "sha256": "68f9390029492c1eefe5e0a2c63687b6536c21267c5b55ad590061cac444c42b",
+          "kind": "superseded",
+          "by": "CVE-2026-8168-qtsvg-6.8.zip",
           "upstream_date": "24-Jul-2026 19:21",
           "first_seen": "2026-10-25T18:03:10+00:00"
         },
         "CVE-2026-8168-qtsvg-6.8-0002.diff": {
-          "kind": "patch",
-          "module": "qtsvg",
-          "sha256": "73c57e4ff97f96689925d0eea122a8c7c9ac51acad4f853186f8c29e074f0da5",
+          "kind": "superseded",
+          "by": "CVE-2026-8168-qtsvg-6.8.zip",
           "upstream_date": "24-Jul-2026 19:21",
           "first_seen": "2026-10-25T18:03:10+00:00"
         },
         "CVE-2026-8168-qtsvg-6.8-0003.diff": {
-          "kind": "patch",
-          "module": "qtsvg",
-          "sha256": "e08ad649fbbc58029ed1922617f9750f5f22a2210188f0c5b3308e0bcbcc18d8",
+          "kind": "superseded",
+          "by": "CVE-2026-8168-qtsvg-6.8.zip",
           "upstream_date": "24-Jul-2026 19:21",
           "first_seen": "2026-10-25T18:03:10+00:00"
         },
         "CVE-2026-8168-qtsvg-6.8-0004.diff": {
-          "kind": "patch",
-          "module": "qtsvg",
-          "sha256": "83f5a4fa886284c3871dfbb369d38e51136dcfb539f60ff499e8a15c3f589aa3",
+          "kind": "superseded",
+          "by": "CVE-2026-8168-qtsvg-6.8.zip",
           "upstream_date": "24-Jul-2026 19:21",
           "first_seen": "2026-10-25T18:03:10+00:00"
         },
@@ -254,8 +249,22 @@
           "first_seen": "2026-10-25T18:03:10+00:00"
         },
         "CVE-2026-8168-qtsvg-6.8.zip": {
-          "kind": "archive",
+          "kind": "patchset",
+          "module": "qtsvg",
+          "sha256": "3435b23c614f367f22e4d1697363aaa7dcf5581e8edf0035adc625636902ebef",
           "upstream_date": "19-Oct-2026 14:54",
+          "members": [
+            "CVE-2026-8168-qtsvg-6.8-0001.diff",
+            "CVE-2026-8168-qtsvg-6.8-0002.diff",
+            "CVE-2026-8168-qtsvg-6.8-0003.diff",
+            "CVE-2026-8168-qtsvg-6.8-0004.diff",
+            "CVE-2026-8168-qtsvg-6.8-0005.diff",
+            "CVE-2026-8168-qtsvg-6.8-0006.diff",
+            "CVE-2026-8168-qtsvg-6.8-0007.diff",
+            "CVE-2026-8168-qtsvg-6.8-0008.diff",
+            "CVE-2026-8168-qtsvg-6.8-0009.diff",
+            "CVE-2026-8168-qtsvg-6.8-0010.diff"
+          ],
           "first_seen": "2026-10-25T18:03:10+00:00"
         },
         "CVE-2026-105923-qtbase-6.8-0001.diff": {

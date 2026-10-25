@@ -23,7 +23,46 @@ patches/
 | `cve` | CVE identifier |
 | `module` | Qt submodule directory the patch applies to (`-p1` inside it) |
 | `sha256` | hash of the reviewed file; the build fails on any mismatch |
-| `source` | where it was downloaded from |
+| `source` | where it was downloaded from (`<zip url>#<member>` for patches from a zip) |
+| `archive`, `archive_sha256` | the zip a patch came from, and the zip's verified hash |
+| `versions` | reviewed decisions per Qt version (see below) |
+
+## Zip archives
+
+Upstream sometimes publishes a CVE fix as a zip with a whole patch series,
+including updated versions of loose diffs published earlier. The check
+verifies the zip against its published `.sha256`, unpacks the `.diff`/`.patch`
+members (ignoring macOS metadata; anything else unexpected stops it for manual
+review) and stages them in archive order. Loose diffs of the same CVE are then
+superseded: removed here and ignored from then on.
+
+## Decisions for patches that do not apply as-is
+
+Patches are written against the newest (often commercial-only) release of a
+line, so they do not always apply to the open-source one. After reviewing a
+patch against a specific Qt version, record the outcome in its entry:
+
+```json
+"versions": {
+  "6.8.5": {
+    "action": "skip",
+    "reason": "Already fixed in 6.8.5: ...",
+    "reviewed": "2026-10-25"
+  }
+}
+```
+
+- `"action": "skip"`: the fix is already there in a different form (or the
+  patch is deliberately not used); `reason` explains why.
+- `"action": "apply"` with `"min_context": N`: apply with at least N lines of
+  matching context (`git apply -CN`, the equivalent of `patch`'s fuzz), for
+  context that changed around otherwise identical code.
+- `"action": "apply"` with `"recount": true`: for upstream files whose hunk
+  headers have wrong line counts.
+
+Decisions are tied to one Qt version, so a new release is checked again from
+scratch. A patch that needs a decision and has none fails the build, and every
+decision with its reason ends up in the release notes.
 
 ## How patches get here
 
@@ -40,7 +79,9 @@ At build time `scripts/apply_patches.py`:
 - skips patches for modules not being built
 - skips patches already contained in the Qt release being built (detected by
   checking that the patch applies in reverse)
-- fails the build if a patch neither applies nor is already present
+- follows the reviewed decisions recorded for the Qt version being built
+- fails the build if a patch neither applies nor is already present, and has
+  no decision
 
 The result of every patch ends up in the release notes.
 

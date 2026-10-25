@@ -212,6 +212,7 @@ jobs:
         "$PY" scripts/apply_patches.py \
           --src qt-everywhere-src-$QT_VERSION \
           --line $QT_LINE \
+          --qt-version $QT_VERSION \
           --modules "$SUBMODULES" \
           --report patches-$QT_NVR.md \
           --json-report patches-$QT_NVR.json

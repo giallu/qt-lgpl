@@ -66,7 +66,8 @@ jobs:
             echo "**Review each diff before merging.** Once merged, the latest release of each affected line is rebuilt with these patches (as a draft release)."
             echo "Patches already contained in a release are detected and skipped at build time."
             echo
-            jq -r '(.new_patches + .changed_patches)[] | "- [\(.file)](\(.url)) — \(.cve), module `\(.module)`"' "$RUNNER_TEMP/report.json"
+            jq -r '(.new_patches + .changed_patches)[] | "- [\(.file)](\(.url)) — \(.cve), module `\(.module)`" + (if .archive then " (from `\(.archive)`)" else "" end)' "$RUNNER_TEMP/report.json"
+            jq -r 'if (.superseded | length) > 0 then "\nSuperseded by a zip series (removed / not used):\n" + ([.superseded[] | "- `\(.file)` → `\(.by)`"] | join("\n")) else empty end' "$RUNNER_TEMP/report.json"
           } > "$RUNNER_TEMP/pr.md"
           gh pr create --base main --head "$branch" \
             --title "Security patches for Qt $lines" \
