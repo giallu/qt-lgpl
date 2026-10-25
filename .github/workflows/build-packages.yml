@@ -277,8 +277,14 @@ jobs:
           -prefix "buildroot/$QT_NVR"
           -sbom
         )
+        cmake_extra=()
         if [ "$(jq -r '.unity_build // false' config/build.json)" = true ]; then
           args+=(-unity-build)
+          # third-party projects that cannot be built as unity builds
+          hook="$(pwd -W 2>/dev/null || pwd)/cmake/no-unity-build.cmake"
+          for project in litehtml gumbo; do
+            cmake_extra+=("-DCMAKE_PROJECT_${project}_INCLUDE=$hook")
+          done
         fi
         if [ "$(printf '%s\n' 6.11.0 "$QT_VERSION" | sort -V | head -1)" = 6.11.0 ]; then
           args+=(-sbom-cyclonedx-v1_6)
@@ -303,6 +309,7 @@ jobs:
         "$configure" "${args[@]}" -- \
           -DFEATURE_clang=OFF \
           -DFEATURE_clangcpp=OFF \
+          "${cmake_extra[@]}" \
           -DCMAKE_TOOLCHAIN_FILE="$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" \
           -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }} \
           -Wno-dev 2>&1 | tee configure.log
