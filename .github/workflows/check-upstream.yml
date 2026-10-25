@@ -1,0 +1,134 @@
+name: Check upstream Qt
+
+# Daily check of download.qt.io for new LTS patch releases and security patches.
+#  - new patch release        -> issue + build started (draft release to review)
+#  - new/changed CVE patch    -> verified against upstream SHA-256, PR to review
+#  - other upstream notices   -> issue
+#  - reviewed patches merged  -> rebuild of the latest release of that line
+#
+# Repository setting needed for the PRs:
+#   Settings > Actions > General > "Allow GitHub Actions to create and approve pull requests"
+
+on:
+  schedule:
+    - cron: '23 5 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['patches/**']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-upstream
+  cancel-in-progress: false
+
+jobs:
+  check:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write        # commit state file, push patch branch
+      pull-requests: write   # open patch PR
+      issues: write          # open notice issues
+      actions: write         # start build-packages.yml
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Check download.qt.io
+        id: check
+        run: |
+          set +e
+          python3 scripts/check_upstream.py --summary "$RUNNER_TEMP/summary.md" --report "$RUNNER_TEMP/report.json"
+          echo "rc=$?" >> "$GITHUB_OUTPUT"
+          cat "$RUNNER_TEMP/summary.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Open pull request with staged patches
+        if: steps.check.outputs.patches_staged == 'true'
+        run: |
+          branch="upstream/security-patches-$(date -u +%Y%m%d-%H%M)"
+          git switch -c "$branch"
+          git add patches
+          lines=$(git diff --cached --name-only | cut -d/ -f2 | sort -u | paste -sd, - | sed 's/,/, /g')
+          git commit -m "Security patches from download.qt.io for Qt $lines"
+          git push origin "$branch"
+          {
+            echo "Security patches published on download.qt.io, downloaded and checked against the SHA-256 published upstream."
+            echo
+            echo "**Review each diff before merging.** Once merged, the latest release of each affected line is rebuilt with these patches (as a draft release)."
+            echo "Patches already contained in a release are detected and skipped at build time."
+            echo
+            jq -r '(.new_patches + .changed_patches)[] | "- [\(.file)](\(.url)) — \(.cve), module `\(.module)`"' "$RUNNER_TEMP/report.json"
+          } > "$RUNNER_TEMP/pr.md"
+          gh pr create --base main --head "$branch" \
+            --title "Security patches for Qt $lines" \
+            --body-file "$RUNNER_TEMP/pr.md"
+          git switch main   # the modified state file follows us back
+
+      - name: Commit state file
+        run: |
+          git add config/upstream-state.json
+          if git diff --cached --quiet; then
+            echo "State unchanged."
+          else
+            git commit -m "Update upstream state ($(date -u +%Y-%m-%d))"
+            git push origin HEAD:main
+          fi
+
+      - name: Open issue for upstream notices
+        if: steps.check.outputs.notices == 'true'
+        run: |
+          title="Upstream Qt changes $(date -u +%Y-%m-%d)"
+          gh issue create --title "$title" --body-file "$RUNNER_TEMP/summary.md"
+
+      - name: Start builds for new releases
+        if: steps.check.outputs.builds != '[]' && steps.check.outputs.builds != ''
+        run: |
+          for version in $(echo '${{ steps.check.outputs.builds }}' | jq -r '.[]'); do
+            if gh release view "qt-$version-1" >/dev/null 2>&1; then
+              echo "qt-$version-1 already released, skipping"; continue
+            fi
+            echo "Starting build for Qt $version"
+            gh workflow run build-packages.yml -f qt-version="$version"
+          done
+
+      - name: Fail on problems
+        if: steps.check.outputs.rc != '0'
+        run: |
+          echo "::error::The upstream check reported problems, see the job summary."
+          exit 1
+
+  rebuild-patched:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Rebuild latest release of each patched line
+        run: |
+          lines=$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" -- patches \
+                  | awk -F/ 'NF >= 3 { print $2 }' | sort -u)
+          for line in $lines; do
+            version=$(jq -r --arg l "$line" '.lines[$l].versions | last // empty' config/upstream-state.json)
+            if [ -z "$version" ]; then
+              echo "::warning::No known release for Qt $line"; continue
+            fi
+            echo "Rebuilding Qt $version with the patches of Qt $line"
+            gh workflow run build-packages.yml -f qt-version="$version"
+          done

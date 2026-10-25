@@ -2,49 +2,121 @@ name: Build Qt
 
 on:
   workflow_dispatch:
+    inputs:
+      qt-version:
+        description: 'Upstream Qt version, e.g. 6.12.0 or 6.8.5'
+        required: true
+        type: string
+      package-release:
+        description: 'Package release number (empty = next free number for this Qt version)'
+        required: false
+        type: string
+        default: ''
+      draft:
+        description: 'Create the GitHub release as a draft'
+        required: false
+        type: boolean
+        default: true
 
 permissions:
-  id-token: write
-  attestations: write
-  contents: write
-  actions: write
+  contents: read
 
-env:  
-  QT_VERSION: 6.8.1
-  QT_RELEASE: 3
+concurrency:
+  group: build-qt-${{ inputs.qt-version }}
+  cancel-in-progress: false
 
 jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      qt-version: ${{ steps.vars.outputs.qt-version }}
+      qt-line: ${{ steps.vars.outputs.qt-line }}
+      release: ${{ steps.vars.outputs.release }}
+      tag: ${{ steps.vars.outputs.tag }}
+      submodules: ${{ steps.vars.outputs.submodules }}
+      submodules-windows: ${{ steps.vars.outputs.submodules-windows }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Compute version strings
+        id: vars
+        env:
+          GH_TOKEN: ${{ github.token }}
+          QT_VERSION: ${{ inputs.qt-version }}
+          PKG_RELEASE: ${{ inputs.package-release }}
+        run: |
+          if ! [[ "$QT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::qt-version must look like 6.12.0, got '$QT_VERSION'"; exit 1
+          fi
+          line=$(echo "$QT_VERSION" | cut -d. -f1-2)
+          if ! jq -e --arg l "$line" '.lts_lines | index($l)' config/build.json >/dev/null; then
+            echo "::warning::Qt $line is not in lts_lines of config/build.json"
+          fi
+
+          if [ -z "$PKG_RELEASE" ]; then
+            # next free package release for this Qt version
+            last=$(gh release list -R "$GITHUB_REPOSITORY" --limit 200 --json tagName -q '.[].tagName' \
+                   | sed -n "s/^qt-${QT_VERSION//./\\.}-\([0-9]\+\)$/\1/p" | sort -n | tail -1)
+            PKG_RELEASE=$(( ${last:-0} + 1 ))
+          fi
+          if ! [[ "$PKG_RELEASE" =~ ^[0-9]+$ ]]; then
+            echo "::error::package-release must be a number"; exit 1
+          fi
+
+          {
+            echo "qt-version=$QT_VERSION"
+            echo "qt-line=$line"
+            echo "release=$PKG_RELEASE"
+            echo "tag=qt-$QT_VERSION-$PKG_RELEASE"
+            echo "submodules=$(jq -r '.submodules | join(",")' config/build.json)"
+            echo "submodules-windows=$(jq -r '(.submodules + .submodules_windows) | join(",")' config/build.json)"
+          } | tee -a "$GITHUB_OUTPUT"
+
   build:
-    # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations. Consider changing this to true when your workflow is stable.
+    needs: prepare
     strategy:
       fail-fast: false
-    
       matrix:
         include:
-          - os: windows-2019
+          - os: windows-2025
             triplet: x64-windows-static
             archive: zip
-  
-          - os: ubuntu-22.04
+
+          - os: ubuntu-22.04      # oldest supported glibc = widest compatibility
             triplet: x64-linux
             archive: tar.xz
 
-    runs-on: ${{ matrix.os }} 
+          - os: macos-15
+            triplet: arm64-osx
+            archive: tar.xz
+
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    env:
+      QT_VERSION: ${{ needs.prepare.outputs.qt-version }}
+      QT_LINE: ${{ needs.prepare.outputs.qt-line }}
+      SUBMODULES: ${{ startsWith(matrix.os, 'windows') && needs.prepare.outputs.submodules-windows || needs.prepare.outputs.submodules }}
     steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Visual Studio shell
-      if: runner.os == 'Windows'
-      uses: egor-tensin/vs-shell@v2
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
-        arch: x64
+        persist-credentials: false
 
-    - name: Set version strings
+    - name: Set package name
       shell: bash
       run: |
         os_name=${{ matrix.os }}
-        echo "QT_VERSION_XY=$(echo ${{ env.QT_VERSION }} | cut -d. -f1-2)" >> "$GITHUB_ENV"
-        echo "QT_NVR=$(echo qt-${{ env.QT_VERSION }}-${{ env.QT_RELEASE }}-${os_name//[.-]/})" >> "$GITHUB_ENV"
+        echo "QT_NVR=${{ needs.prepare.outputs.tag }}-${os_name//[.-]/}" >> "$GITHUB_ENV"
+
+    - name: Set up Visual Studio shell
+      if: runner.os == 'Windows'
+      uses: egor-tensin/vs-shell@7710434f30f873ff4ab78184b74cc576a10726d6 # v2.2.3
+      with:
+        arch: x64
 
     # Needed to use GNU patch instead of Strawberry Perl patch
     # https://github.com/actions/runner-images/issues/5459#issuecomment-1532856844
@@ -82,87 +154,320 @@ jobs:
         libxkbcommon-x11-dev \
         libxrender-dev
 
+    - name: Install macOS dependencies
+      if: runner.os == 'macOS'
+      run: brew install ninja
+
     # Linux builds failed due to low disk space, apply sugegstion from
     # https://github.com/actions/runner-images/issues/10699#issuecomment-2402475892
+    # Runs in the background (it takes ~3.5 min) while sources download and
+    # vcpkg installs; "Configure build" waits for it to finish.
     - name: Clean up disk space
       if: runner.os == 'Linux'
       run: |
-        sudo rm -rf /usr/share/dotnet
-        sudo rm -rf /usr/local/lib/android
-        sudo rm -rf /opt/ghc
+        nohup sh -c 'sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc; touch "$RUNNER_TEMP/cleanup.done"' \
+          > "$RUNNER_TEMP/cleanup.log" 2>&1 &
 
-    - name: Download and extract Qt sources
+    - name: Download and verify Qt sources
       shell: bash
       run: |
-        curl -LO https://download.qt.io/archive/qt/${{ env.QT_VERSION_XY }}/${{ env.QT_VERSION }}/single/qt-everywhere-src-${{ env.QT_VERSION }}.tar.xz
-        tar xf qt-everywhere-src-${{ env.QT_VERSION }}.tar.xz
+        file=qt-everywhere-src-$QT_VERSION.tar.xz
+        for location in official_releases archive; do
+          url=https://download.qt.io/$location/qt/$QT_LINE/$QT_VERSION/single/$file
+          if curl -fsSL -o "$file.sha256" "$url.sha256"; then break; fi
+          url=
+        done
+        [ -n "$url" ] || { echo "::error::Qt $QT_VERSION not found on download.qt.io"; exit 1; }
+
+        # The .sha256 is served by download.qt.io itself; the tarball may come
+        # from a mirror, so it is checked against that published hash.
+        expected=$(grep -oE '[0-9a-f]{64}' "$file.sha256" | head -1)
+        [ -n "$expected" ] || { echo "::error::no SHA-256 published for $url"; exit 1; }
+        echo "Downloading $url (expected sha256 $expected)"
+        curl -fL --retry 3 -o "$file" "$url"
+        PY=$(command -v python3 || command -v python)
+        echo "PY=$PY" >> "$GITHUB_ENV"
+        "$PY" - "$file" "$expected" <<'EOF'
+        import hashlib, sys
+        path, expected = sys.argv[1], sys.argv[2]
+        h = hashlib.sha256()
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(1 << 20), b""):
+                h.update(chunk)
+        if h.hexdigest() != expected:
+            sys.exit(f"SHA-256 mismatch for {path}: got {h.hexdigest()}, expected {expected}")
+        print(f"SHA-256 OK: {expected}")
+        EOF
+        echo "QT_SRC_SHA256=$expected" >> "$GITHUB_ENV"
+        echo "QT_SRC_URL=$url" >> "$GITHUB_ENV"
+        tar xf "$file"
+        rm "$file"
+
+    - name: Apply reviewed security patches
+      shell: bash
+      run: |
+        "$PY" scripts/apply_patches.py \
+          --src qt-everywhere-src-$QT_VERSION \
+          --line $QT_LINE \
+          --modules "$SUBMODULES" \
+          --report patches-$QT_NVR.md \
+          --json-report patches-$QT_NVR.json
+
+    - name: Set up vcpkg
+      id: vcpkg
+      shell: bash
+      run: |
+        root="$VCPKG_INSTALLATION_ROOT"
+        if [ -z "$root" ] || [ ! -d "$root" ]; then
+          root="$RUNNER_TEMP/vcpkg"
+          git clone --depth 1 https://github.com/microsoft/vcpkg "$root"
+          "$root/bootstrap-vcpkg.sh" -disableMetrics
+          echo "VCPKG_INSTALLATION_ROOT=$root" >> "$GITHUB_ENV"
+        fi
+        # Binary cache: OpenSSL is rebuilt only when vcpkg itself changes.
+        echo "VCPKG_BINARY_SOURCES=clear;files,$RUNNER_TEMP/vcpkg-cache,readwrite" >> "$GITHUB_ENV"
+        mkdir -p "$RUNNER_TEMP/vcpkg-cache"
+        echo "commit=$(git -C "$root" rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+    - name: Restore vcpkg binary cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ runner.temp }}/vcpkg-cache
+        key: vcpkg-${{ matrix.triplet }}-${{ steps.vcpkg.outputs.commit }}
+        restore-keys: vcpkg-${{ matrix.triplet }}-
 
     - name: Install dependencies
       shell: bash
       run: |
-        vcpkg install openssl --triplet=${{ matrix.triplet }}
-      
+        "$VCPKG_INSTALLATION_ROOT/vcpkg" install openssl --triplet=${{ matrix.triplet }}
+        "$VCPKG_INSTALLATION_ROOT/vcpkg" list openssl | tee vcpkg-openssl.txt
+
+    # Qt >= 6.11 can also write CycloneDX SBOMs; that needs these Python
+    # packages. A venv keeps it working on runners with an externally managed
+    # Python (macOS/Homebrew). If this fails, Qt still writes SPDX SBOMs.
+    - name: Set up Python for Qt SBOM generation
+      shell: bash
+      run: |
+        "$PY" -m venv "$RUNNER_TEMP/sbomvenv"
+        bin="$RUNNER_TEMP/sbomvenv/bin"
+        [ "$RUNNER_OS" = Windows ] && bin="$RUNNER_TEMP/sbomvenv/Scripts"
+        "$bin/python" -m pip install --quiet 'cyclonedx-python-lib[json-validation]' tomli \
+          && echo "$bin" >> "$GITHUB_PATH" \
+          || echo "::warning::CycloneDX dependencies not installed; only SPDX SBOMs will be generated"
+
     - name: Configure build
       shell: bash
-      run: >
-        qt-everywhere-src-${{ env.QT_VERSION }}/configure${{ runner.os == 'Windows' && '.bat' || '' }}
-        -cmake-generator Ninja
-        -openssl-linked
-        -release
-        -no-use-gold-linker
-        -qt-libjpeg
-        -qt-libpng
-        -qt-zlib
-        -qt-pcre
-        -qt-harfbuzz
-        -qt-doubleconversion
-        -nomake examples
-        -nomake tests
-        -make tools
-        ${{ runner.os == 'Windows' && '
-        -opengl dynamic
-        -submodules qtbase,qtimageformats,qtdeclarative,qtsvg,qtremoteobjects,qtactiveqt
-        ' || '
-        -submodules qtbase,qtimageformats,qtdeclarative,qtremoteobjects,qtsvg
-        ' }}
-        -prefix buildroot/${{ env.QT_NVR }}
-        --
-        -DCMAKE_TOOLCHAIN_FILE="${VCPKG_INSTALLATION_ROOT}/scripts/buildsystems/vcpkg.cmake"
-        -Wno-dev
+      run: |
+        args=(
+          -cmake-generator Ninja
+          -openssl-linked
+          -release
+          -qt-libjpeg
+          -qt-libpng
+          -qt-zlib
+          -qt-pcre
+          -qt-harfbuzz
+          -qt-doubleconversion
+          -nomake examples
+          -nomake tests
+          -submodules "$SUBMODULES"
+          -prefix "buildroot/$QT_NVR"
+          -sbom
+        )
+        if [ "$(jq -r '.unity_build // false' config/build.json)" = true ]; then
+          args+=(-unity-build)
+        fi
+        if [ "$(printf '%s\n' 6.11.0 "$QT_VERSION" | sort -V | head -1)" = 6.11.0 ]; then
+          args+=(-sbom-cyclonedx-v1_6)
+        fi
+        configure=qt-everywhere-src-$QT_VERSION/configure
+        if [ "$RUNNER_OS" = Windows ]; then
+          configure+=.bat
+          args+=(-opengl dynamic)
+        fi
+        if [ "$RUNNER_OS" = Linux ]; then
+          args+=(-no-use-gold-linker)
+        fi
+        if [ "$RUNNER_OS" = Linux ]; then
+          for _ in $(seq 60); do [ -f "$RUNNER_TEMP/cleanup.done" ] && break; echo "waiting for disk cleanup..."; sleep 10; done
+          cat "$RUNNER_TEMP/cleanup.log" 2>/dev/null || true
+          df -h /
+        fi
+        set -o pipefail
+        # FEATURE_clang*: qttools would otherwise pick up whatever libclang the
+        # runner has (e.g. Homebrew LLVM on macOS) for qdoc/lupdate, making the
+        # package depend on it at run time.
+        "$configure" "${args[@]}" -- \
+          -DFEATURE_clang=OFF \
+          -DFEATURE_clangcpp=OFF \
+          -DCMAKE_TOOLCHAIN_FILE="$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" \
+          -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }} \
+          -Wno-dev 2>&1 | tee configure.log
+        # configure.bat can exit 0 even when CMake failed
+        if [ ! -f CMakeCache.txt ] || grep -q "CMake Error" configure.log; then
+          echo "::error::configure failed"; exit 1
+        fi
 
     - name: Compile and install
       shell: bash
       run: |
-         cmake --build . --parallel
-         cmake --install .
+        set -o pipefail
+        cmake --build . --parallel 2>&1 | tee build.log
+        cmake --install .
+
+    # Surface the reason for a failure as annotations on the run page,
+    # so it is visible without opening (or downloading) the full log.
+    - name: Report build errors
+      if: failure()
+      shell: bash
+      run: |
+        for f in configure.log build.log; do
+          [ -f "$f" ] || continue
+          {
+            grep -E "CMake Error|ERROR|[Ee]rror:|FAILED:|Unknown|unknown" "$f" | head -20
+            echo "----- last lines of $f -----"
+            tail -30 "$f"
+          } > "$f.excerpt"
+          msg=$(tr -d '\r' < "$f.excerpt" | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}')
+          echo "::error title=${{ matrix.os }} $f::$msg"
+        done
 
     - name: Create archive
       shell: bash
-      env:
-        ARCHIVE_CMD: ${{ runner.os == 'Windows' && '"C:\Program Files\7-Zip\7z.exe" a' || 'tar cjf' }}
       run: |
+        mkdir dist
         cd buildroot
-        ${{ env.ARCHIVE_CMD }} ${{ env.QT_NVR }}.${{ matrix.archive }} ${{ env.QT_NVR }}
+        if [ "${{ matrix.archive }}" = zip ]; then
+          "C:\Program Files\7-Zip\7z.exe" a ../dist/$QT_NVR.zip $QT_NVR
+        else
+          tar cJf ../dist/$QT_NVR.tar.xz $QT_NVR
+        fi
+        cd ..
+        cp config.summary dist/config-$QT_NVR.summary
+        cp config.opt dist/config-$QT_NVR.opt
+        mv patches-$QT_NVR.md dist/
+        echo "$QT_SRC_SHA256  $QT_SRC_URL" > dist/source-$QT_NVR.sha256
 
-    - uses: actions/attest-build-provenance@v2
-      with:
-        subject-path: buildroot/${{ env.QT_NVR }}.${{ matrix.archive }}
-        subject-name: ${{ env.QT_NVR }}.${{ matrix.archive }}
+    - name: Collect SBOMs
+      shell: bash
+      run: |
+        # Qt's own SBOMs (SPDX, plus CycloneDX for Qt >= 6.11), installed with Qt
+        "$PY" - "buildroot/$QT_NVR" "dist/sbom-$QT_NVR.zip" <<'EOF'
+        import sys, zipfile
+        from pathlib import Path
+        root, out = Path(sys.argv[1]), sys.argv[2]
+        files = [p for p in root.rglob("*") if p.is_file() and
+                 (p.name.endswith((".spdx", ".spdx.json", ".cdx.json")))]
+        if not files:
+            print("::warning::Qt did not install any SBOM files")
+        with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
+            for p in files:
+                z.write(p, p.relative_to(root))
+        print(f"{len(files)} SBOM files -> {out}")
+        EOF
+        # what we add on top: verified source, applied CVE patches, OpenSSL
+        "$PY" scripts/make_sbom_extras.py \
+          --package "$QT_NVR" \
+          --qt-version "$QT_VERSION" \
+          --source-url "$QT_SRC_URL" \
+          --source-sha256 "$QT_SRC_SHA256" \
+          --patches "patches-$QT_NVR.json" \
+          --vcpkg-list vcpkg-openssl.txt \
+          --repo "$GITHUB_REPOSITORY" \
+          --output "dist/sbom-extras-$QT_NVR.cdx.json"
 
-    - name: Create artifact
-      uses: actions/upload-artifact@v4
+    - name: Upload build output
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: ${{ env.QT_NVR }}
-        path: buildroot/${{ env.QT_NVR }}.${{ matrix.archive }}
+        path: dist/
         retention-days: 7
         if-no-files-found: error
 
-    - name: Create release
-      uses: softprops/action-gh-release@v2
+  # Releases are created only from the default branch: GITHUB_TOKEN cannot
+  # create the release tag on a branch commit that changes workflow files
+  # ("Resource not accessible by integration"). Builds from other branches
+  # are test builds: download the packages from the run's artifacts.
+  test-build-note:
+    needs: [prepare, build]
+    if: github.ref_name != github.event.repository.default_branch
+    runs-on: ubuntu-24.04
+    steps:
+    - run: |
+        echo "### Test build from \`${{ github.ref_name }}\`" >> "$GITHUB_STEP_SUMMARY"
+        echo "No release created (releases are made from \`${{ github.event.repository.default_branch }}\` only). The packages are in this run's artifacts." >> "$GITHUB_STEP_SUMMARY"
+
+  release:
+    needs: [prepare, build]
+    if: github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write       # create the release
+      id-token: write       # build provenance attestation
+      attestations: write
+    env:
+      TAG: ${{ needs.prepare.outputs.tag }}
+      QT_VERSION: ${{ needs.prepare.outputs.qt-version }}
+    steps:
+    - name: Download build outputs
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
       with:
-        tag_name: ${{ env.QT_NVR }}
-        target_commitish: ${{ github.sha }}
-        files: |
-          buildroot/${{ env.QT_NVR }}.${{ matrix.archive }}
-          config.opt
-          config.summary
+        path: dist
+        merge-multiple: true
+
+    - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+      with:
+        subject-path: |
+          dist/*.zip
+          dist/*.tar.xz
+
+    - name: Write release notes
+      run: |
+        cd dist
+        {
+          echo "LGPL-only build of upstream Qt $QT_VERSION (package release ${{ needs.prepare.outputs.release }})."
+          echo
+          echo "Upstream source: \`$(cut -d' ' -f3 "$(ls source-*.sha256 | head -1)")\`"
+          echo "Source SHA-256: \`$(cut -d' ' -f1 "$(ls source-*.sha256 | head -1)")\` (verified against download.qt.io)"
+          echo
+          echo "Modules: $(echo '${{ needs.prepare.outputs.submodules }}' | sed 's/,/, /g') (+ qtactiveqt on Windows)"
+          echo
+          echo "## Security patches"
+          echo
+          cat "$(ls patches-*.md | head -1)"
+          echo
+          echo "## SHA-256 of the packages"
+          echo
+          echo '```'
+          sha256sum *.zip *.tar.xz
+          echo '```'
+          echo
+          echo "## SBOM"
+          echo
+          echo "- \`sbom-<package>.zip\`: Qt's own SBOMs (SPDX 2.3; CycloneDX 1.6 for Qt 6.11+), also installed in each package"
+          echo "- \`sbom-extras-<package>.cdx.json\`: verified upstream source, applied CVE patches and the bundled OpenSSL"
+          echo
+          echo "Verify provenance with: \`gh attestation verify <file> --repo $GITHUB_REPOSITORY\`"
+        } > ../notes.md
+        cat ../notes.md
+
+    - name: Create release
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        set -o pipefail
+        ls -la dist
+        gh release create "$TAG" \
+          -R "$GITHUB_REPOSITORY" \
+          --target "$GITHUB_SHA" \
+          --title "Qt $QT_VERSION (release ${{ needs.prepare.outputs.release }})" \
+          --notes-file notes.md \
+          ${{ inputs.draft && '--draft' || '' }} \
+          dist/*.zip dist/*.tar.xz dist/*.summary dist/*.opt dist/*.cdx.json 2>&1 | tee release.log
+
+    - name: Report release errors
+      if: failure()
+      run: |
+        [ -f release.log ] || exit 0
+        msg=$(tail -20 release.log | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}')
+        echo "::error title=gh release create::$msg"

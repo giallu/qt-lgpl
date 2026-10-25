@@ -1,0 +1,15 @@
+{
+  "_comment": "Maintained by .github/workflows/check-upstream.yml. Records what has already been seen on download.qt.io so only real changes are reported.",
+  "last_committed": null,
+  "known_lines": null,
+  "lines": {
+    "6.12": {
+      "versions": ["6.12.0"],
+      "files": {}
+    },
+    "6.8": {
+      "versions": ["6.8.0", "6.8.1", "6.8.2", "6.8.3", "6.8.4", "6.8.5"],
+      "files": {}
+    }
+  }
+}
