@@ -317,6 +317,9 @@ jobs:
           df -h /
         fi
         set -o pipefail
+        # VCPKG_APPLOCAL_DEPS=OFF: vcpkg would copy dependency DLLs next to every
+        # linked binary; nothing needs copying (OpenSSL is static) and parallel
+        # copies raced on Windows ("file is being used by another process").
         # qttools would otherwise pick up whatever libclang the runner has
         # (Homebrew LLVM on macOS, a broken llvm-14 on Ubuntu 22.04) for
         # qdoc/lupdate, making the package depend on it at run time or
@@ -329,6 +332,7 @@ jobs:
           "${cmake_extra[@]}" \
           -DCMAKE_TOOLCHAIN_FILE="$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" \
           -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }} \
+          -DVCPKG_APPLOCAL_DEPS=OFF \
           -Wno-dev 2>&1 | tee configure.log
         # configure.bat can exit 0 even when CMake failed
         if [ ! -f CMakeCache.txt ] || grep -q "CMake Error" configure.log; then
