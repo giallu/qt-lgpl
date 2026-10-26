@@ -1,6 +1,6 @@
 {
   "_comment": "Maintained by .github/workflows/check-upstream.yml. Records what has already been seen on download.qt.io so only real changes are reported.",
-  "last_committed": "2026-10-25T19:17:56+00:00",
+  "last_committed": "2026-10-26T11:18:10+00:00",
   "known_lines": [
     "6.10",
     "6.11",
@@ -280,6 +280,12 @@
           "sha256": "c90b493a7983be3ebfabaeb337496a693268843c7e52ec4727bfbadddca2d4ba",
           "upstream_date": "20-Oct-2026 15:58",
           "first_seen": "2026-10-25T18:03:10+00:00"
+        },
+        "CVE-2026-107457-qtmqtt-6.8.diff": {
+          "kind": "not-built",
+          "module": "qtmqtt",
+          "upstream_date": "26-Oct-2026 11:26",
+          "first_seen": "2026-10-26T11:17:51+00:00"
         }
       }
     }
