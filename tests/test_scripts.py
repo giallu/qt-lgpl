@@ -3,6 +3,7 @@
 Run with:  python3 -m unittest discover -s tests -v
 """
 
+import datetime as dt
 import hashlib
 import json
 import subprocess
@@ -149,6 +150,20 @@ class CheckUpstreamTest(unittest.TestCase):
         report = self.run_check()
         self.assertTrue(any("mismatch" in e for e in report["errors"]))
         self.assertNotIn("CVE-2026-1-qtbase-6.12.diff", self.state["lines"]["6.12"]["files"])
+
+    def test_missing_checksum_pending_then_error(self):
+        base = "https://download.qt.io/official_releases/qt/6.12/"
+        del self.site.pages[base + "CVE-2026-1-qtbase-6.12.diff.sha256"]
+        recent = dt.datetime.now(dt.timezone.utc).strftime("%d-%b-%Y %H:%M")
+        self.site.pages[base] = self.site.pages[base].replace(b"15-Oct-2026 10:57", recent.encode())
+        report = self.run_check()
+        self.assertEqual([p["file"] for p in report["pending"]], ["CVE-2026-1-qtbase-6.12.diff"])
+        self.assertEqual(report["errors"], [])
+        self.assertNotIn("CVE-2026-1-qtbase-6.12.diff", self.state["lines"]["6.12"]["files"])
+        # an old file without checksum is an error
+        self.site.pages[base] = self.site.pages[base].replace(recent.encode(), b"01-Jan-2026 10:00")
+        report = self.run_check()
+        self.assertTrue(any("no .sha256" in e for e in report["errors"]))
 
     def test_changed_patch_detected(self):
         self.run_check()

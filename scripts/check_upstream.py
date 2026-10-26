@@ -40,6 +40,9 @@ from pathlib import Path
 BASE_URL = "https://download.qt.io"
 LOCATIONS = ("official_releases", "archive")  # official first: preferred source
 KEEPALIVE_DAYS = 25  # GitHub disables scheduled workflows after 60 idle days
+# download.qt.io computes checksums asynchronously: a file published minutes
+# ago may not have its .sha256 yet. Wait this long before calling it an error.
+CHECKSUM_GRACE_HOURS = 48
 USER_AGENT = "qt-lgpl-upstream-check (+https://github.com/giallu/qt-lgpl)"
 
 VERSION_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
@@ -209,6 +212,20 @@ def stage_patch(patches_dir: Path, line: str, entry: dict, data: bytes) -> None:
     lock_path.write_text(json.dumps(lock, indent=2) + "\n")
 
 
+def missing_checksum(report: dict, info: dict, date: str | None) -> None:
+    """No .sha256 published: pending while the file is new, an error afterwards.
+
+    Either way the file is not recorded in the state, so the next run retries.
+    """
+    listed = date_key(date).replace(tzinfo=dt.timezone.utc) if date else None
+    age_h = (dt.datetime.now(dt.timezone.utc) - listed).total_seconds() / 3600 if listed else None
+    if age_h is not None and age_h < CHECKSUM_GRACE_HOURS:
+        report["pending"].append({**info, "listed": date})
+    else:
+        report["errors"].append(f"{info['file']}: no .sha256 published upstream "
+                                f"(listed {date or 'at an unknown date'}), not staged")
+
+
 def check(config: dict, state: dict, patches_dir: Path) -> dict:
     """Update state in place and return a report of what changed."""
     report: dict[str, list] = {
@@ -217,6 +234,7 @@ def check(config: dict, state: dict, patches_dir: Path) -> dict:
         "changed_patches": [],
         "not_built": [],
         "superseded": [],
+        "pending": [],
         "manual_review": [],
         "new_lines": [],
         "errors": [],
@@ -291,8 +309,11 @@ def check(config: dict, state: dict, patches_dir: Path) -> dict:
                 except Exception as exc:
                     report["errors"].append(f"{name}: {exc}")
                     continue
-                if data is None or published is None:
-                    report["errors"].append(f"{name}: not downloadable or no .sha256 published, not staged")
+                if data is None:
+                    report["errors"].append(f"{name}: listed but not downloadable")
+                    continue
+                if published is None:
+                    missing_checksum(report, info, date)
                     continue
                 actual = hashlib.sha256(data).hexdigest()
                 if actual != published:
@@ -365,7 +386,7 @@ def check(config: dict, state: dict, patches_dir: Path) -> dict:
                 continue
             actual = hashlib.sha256(data).hexdigest()
             if published is None:
-                report["errors"].append(f"{name}: no .sha256 published upstream, not staged")
+                missing_checksum(report, info, date)
                 continue
             if actual != published:
                 report["errors"].append(
@@ -438,6 +459,8 @@ def render_summary(report: dict, builds: list[str]) -> str:
         for p in report["changed_patches"]])
     section("Loose patches superseded by a zip series (not used)", [
         f"- `{p['file']}` — superseded by `{p['by']}`" for p in report["superseded"]])
+    section("Waiting for upstream checksums (retried automatically)", [
+        f"- `{p['file']}` — {p['cve']}, module `{p['module']}`, listed {p['listed']}" for p in report["pending"]])
     section("Need manual review", [
         f"- [{p['file']}]({p['url']}) — {p['cve']}" for p in report["manual_review"]])
     section("Patches for modules we don't build (no action needed)", [
