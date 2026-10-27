@@ -25,6 +25,15 @@
       "source": "https://download.qt.io/official_releases/qt/6.12/CVE-2026-101201-qtqt5compat-6.12-0002.diff",
       "upstream_date": "15-Oct-2026 10:57",
       "added": "2026-10-25T18:03:10+00:00"
+    },
+    {
+      "file": "CVE-2026-105924-qtbase-6.12.diff",
+      "cve": "CVE-2026-105924",
+      "module": "qtbase",
+      "sha256": "c27d27b86aaf2cdab0c18d513fbb94a432e98782eddfc5f856387e4be68be50b",
+      "source": "https://download.qt.io/official_releases/qt/6.12/CVE-2026-105924-qtbase-6.12.diff",
+      "upstream_date": "26-Oct-2026 11:25",
+      "added": "2026-10-27T10:42:52+00:00"
     }
   ]
 }
