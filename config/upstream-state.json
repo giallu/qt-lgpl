@@ -1,6 +1,6 @@
 {
   "_comment": "Maintained by .github/workflows/check-upstream.yml. Records what has already been seen on download.qt.io so only real changes are reported.",
-  "last_committed": "2026-10-26T11:18:10+00:00",
+  "last_committed": "2026-10-27T10:43:06+00:00",
   "known_lines": [
     "6.10",
     "6.11",
@@ -25,6 +25,13 @@
           "sha256": "13d1167bb7cff7e58ddb21af6749f07691e519875a92767f19c5f6a4806961e2",
           "upstream_date": "15-Oct-2026 10:57",
           "first_seen": "2026-10-25T18:03:10+00:00"
+        },
+        "CVE-2026-105924-qtbase-6.12.diff": {
+          "kind": "patch",
+          "module": "qtbase",
+          "sha256": "c27d27b86aaf2cdab0c18d513fbb94a432e98782eddfc5f856387e4be68be50b",
+          "upstream_date": "26-Oct-2026 11:25",
+          "first_seen": "2026-10-27T10:42:52+00:00"
         }
       }
     },
@@ -286,6 +293,55 @@
           "module": "qtmqtt",
           "upstream_date": "26-Oct-2026 11:26",
           "first_seen": "2026-10-26T11:17:51+00:00"
+        },
+        "CVE-2026-105924-qtbase-6.8.diff": {
+          "kind": "patch",
+          "module": "qtbase",
+          "sha256": "11cc8db5992974c79a0cec0b86c7181921869924d7896ef4005ace46f4e09bb0",
+          "upstream_date": "26-Oct-2026 11:25",
+          "first_seen": "2026-10-27T10:42:52+00:00"
+        },
+        "CVE-2026-105946-qtbase-6.8-0001.diff": {
+          "kind": "patch",
+          "module": "qtbase",
+          "sha256": "c87d428ff0f64f7ddbe8de06afccae0b6c71e506b2e1699b08ac890d6c51561c",
+          "upstream_date": "26-Oct-2026 11:26",
+          "first_seen": "2026-10-27T10:42:52+00:00"
+        },
+        "CVE-2026-105946-qtbase-6.8-0002.diff": {
+          "kind": "patch",
+          "module": "qtbase",
+          "sha256": "24385d704582d54adcf433bde23bf87e69f18b55cd9f9114a53af8fac3a0761d",
+          "upstream_date": "26-Oct-2026 11:26",
+          "first_seen": "2026-10-27T10:42:52+00:00"
+        },
+        "CVE-2026-105946-qtbase-6.8-0003.diff": {
+          "kind": "patch",
+          "module": "qtbase",
+          "sha256": "fc3c3d21b1f0234d6488e3d95f482e2ce464372fc7dfc15fde80b20632ccacfb",
+          "upstream_date": "26-Oct-2026 11:26",
+          "first_seen": "2026-10-27T10:42:52+00:00"
+        },
+        "CVE-2026-107157-qtbase-6.8.diff": {
+          "kind": "patch",
+          "module": "qtbase",
+          "sha256": "7a971211f39e4e14e82b4b3f1c96401bd44c28326c3c5b5ea5d8f379d38ec869",
+          "upstream_date": "26-Oct-2026 11:26",
+          "first_seen": "2026-10-27T10:42:52+00:00"
+        },
+        "CVE-2026-107472-qt5compat-6.8.diff": {
+          "kind": "patch",
+          "module": "qt5compat",
+          "sha256": "76b9bdcd8aa4e0b104bcb10546f263adf9e233d3d783387bd85b0a2ffc917b2a",
+          "upstream_date": "26-Oct-2026 11:26",
+          "first_seen": "2026-10-27T10:42:52+00:00"
+        },
+        "CVE-2026-107590-qt5compat-6.8.diff": {
+          "kind": "patch",
+          "module": "qt5compat",
+          "sha256": "9b0796ea1348a797c6965edb4c281b5f044bfb331fabfb79ec1490bfd37e7959",
+          "upstream_date": "26-Oct-2026 11:26",
+          "first_seen": "2026-10-27T10:42:52+00:00"
         }
       }
     }
