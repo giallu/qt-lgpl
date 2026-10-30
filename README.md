@@ -26,6 +26,8 @@ Modules (Qt submodules): qtbase, qtimageformats, qtdeclarative, qtsvg, qtremoteo
 
 Tools (moc, rcc, uic, qmake, windeployqt/macdeployqt, Designer, Linguist, Assistant, ...) are included. Qt licenses its tools under the GPL with the Qt GPL exception, which allows using them to build applications under any license.
 
+The Linux packages are built without ICU (`-no-icu`), so they don't depend on the ICU version of a particular Ubuntu release. Qt then uses simpler built-in fallbacks for collation (`QCollator`), locale-aware text handling and legacy text codecs. Open an issue if you need ICU.
+
 **Note:** `qtdeclarative` also contains the *Qt Qml Compiler* library (`QtQmlCompiler`), which Qt makes available as open source under the GPL only. It is used by tools such as `qmllint` and `qmlsc`; do not link your application against it if you rely on the LGPL.
 
 ### Security patches
@@ -86,7 +88,7 @@ For convenience, action is provided in this repo so the setup in a GH workflow i
 | input | default | meaning |
 |---|---|---|
 | `qt-version` | `6.12-latest` | an exact package (`6.12.0-1`) or the newest published package of a line (`6.12-latest`, `6.8-latest`) |
-| `os` | the runner's platform | which build to use: `windows-2025`, `ubuntu-22.04` (also fine on newer Ubuntu), `macos-15` |
+| `os` | the runner's platform | which build to use: `windows-2025`, `ubuntu-22.04` (also runs on newer Ubuntu releases), `macos-15` |
 | `verify-attestation` | `true` | check the build provenance attestation of the package |
 | `cache` | `true` | cache the downloaded package between runs |
 

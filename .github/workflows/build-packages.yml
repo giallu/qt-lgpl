@@ -309,7 +309,9 @@ jobs:
           args+=(-opengl dynamic)
         fi
         if [ "$RUNNER_OS" = Linux ]; then
-          args+=(-no-use-gold-linker)
+          # -no-icu: the runner's ICU (libicuuc.so.70) exists only on Ubuntu 22.04,
+          # so linking it would tie QtCore to that release
+          args+=(-no-use-gold-linker -no-icu)
         fi
         if [ "$RUNNER_OS" = Linux ]; then
           for _ in $(seq 60); do [ -f "$RUNNER_TEMP/cleanup.done" ] && break; echo "waiting for disk cleanup..."; sleep 10; done
