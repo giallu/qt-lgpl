@@ -64,7 +64,9 @@ jobs:
           tools="moc rcc uic qmake lrelease lupdate designer"
           [ "$RUNNER_OS" != Linux ] && tools="$tools $deploy"
           for t in $tools; do
-            if command -v "$t" >/dev/null || [ -e "${{ steps.qt.outputs.qt-dir }}/bin/$t.app" ]; then
+            # On Linux and macOS, Qt 6 installs moc, rcc and uic in libexec/, not bin/
+            qt="${{ steps.qt.outputs.qt-dir }}"
+            if command -v "$t" >/dev/null || [ -e "$qt/bin/$t.app" ] || [ -x "$qt/libexec/$t" ]; then
               echo "[ OK ] $t"
             else
               echo "::error::$t not found in the package"; missing=1
