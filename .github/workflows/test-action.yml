@@ -74,6 +74,10 @@ jobs:
           done
           exit $missing
 
+      - name: Install OpenGL development files
+        if: runner.os == 'Linux'
+        run: sudo apt-get update -q && sudo apt-get install -y -q libgl-dev
+
       - name: Build smoke app
         shell: bash
         run: |
