@@ -92,7 +92,7 @@ For convenience, action is provided in this repo so the setup in a GH workflow i
 
 The action adds Qt to `PATH` and `CMAKE_PREFIX_PATH`, and exposes the install directory as the `qt-dir` output and the resolved package as `qt-package`. Older per-OS releases such as `6.8.1-3` with `os: windows-2019` still work (add `verify-attestation: false` for any that predate attestations).
 
-On Linux, building against QtGui (and so QtWidgets, QtSvg, ...) needs the system OpenGL development files, which GitHub's Ubuntu runners don't have: install them with `sudo apt-get install -y libgl-dev` before configuring. The build tools `moc`, `rcc` and `uic` are in `<QT_DIR>/libexec` on Linux and macOS; CMake finds them on its own.
+On Linux, building against QtGui (and so QtWidgets, QtSvg, ...) needs the system OpenGL development files, which GitHub's Ubuntu runners don't have: install them with `sudo apt-get install -y libgl-dev libopengl0 libegl1` before configuring (the last two are also needed at run time). The build tools `moc`, `rcc` and `uic` are in `<QT_DIR>/libexec` on Linux and macOS; CMake finds them on its own.
 
 see [this sample repo](https://github.com/giallu/qt-test-ssl) for a working matrix build example using the action
 

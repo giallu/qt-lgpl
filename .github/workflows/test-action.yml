@@ -76,7 +76,7 @@ jobs:
 
       - name: Install OpenGL development files
         if: runner.os == 'Linux'
-        run: sudo apt-get update -q && sudo apt-get install -y -q libgl-dev
+        run: sudo apt-get update -q && sudo apt-get install -y -q libgl-dev libopengl0 libegl1
 
       - name: Build smoke app
         shell: bash
