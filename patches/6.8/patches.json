@@ -488,6 +488,59 @@
       "source": "https://download.qt.io/archive/qt/6.8/CVE-2026-107590-qt5compat-6.8.diff",
       "upstream_date": "26-Oct-2026 11:26",
       "added": "2026-10-27T10:42:52+00:00"
+    },
+    {
+      "file": "CVE-2026-100140-qt5compat-6.8-0001.diff",
+      "cve": "CVE-2026-100140",
+      "module": "qt5compat",
+      "sha256": "4d1a71f58276e5bc2027dbf09fd3cbcadfdbbd3fcb8ca5cb96cb1118bc3942a2",
+      "source": "https://download.qt.io/archive/qt/6.8/CVE-2026-100140-qt5compat-6.8.zip#CVE-2026-100140-qt5compat-6.8-0001.diff",
+      "archive": "CVE-2026-100140-qt5compat-6.8.zip",
+      "archive_sha256": "10b0563e379cedfd125719b727bad3a520ed08bf62993162dbce052201c2484a",
+      "upstream_date": "30-Oct-2026 13:48",
+      "added": "2026-10-31T10:59:26+00:00"
+    },
+    {
+      "file": "CVE-2026-100140-qt5compat-6.8-0002.diff",
+      "cve": "CVE-2026-100140",
+      "module": "qt5compat",
+      "sha256": "6d4ef539fb7ace7031b85c41f583da051b4a1d268881477b9b9a0eefcf67abfc",
+      "source": "https://download.qt.io/archive/qt/6.8/CVE-2026-100140-qt5compat-6.8.zip#CVE-2026-100140-qt5compat-6.8-0002.diff",
+      "archive": "CVE-2026-100140-qt5compat-6.8.zip",
+      "archive_sha256": "10b0563e379cedfd125719b727bad3a520ed08bf62993162dbce052201c2484a",
+      "upstream_date": "30-Oct-2026 13:48",
+      "added": "2026-10-31T10:59:26+00:00"
+    },
+    {
+      "file": "CVE-2026-100140-qt5compat-6.8-0003.diff",
+      "cve": "CVE-2026-100140",
+      "module": "qt5compat",
+      "sha256": "121f5fe01ca28ec1dc01ea96d7aa46f685515e98b8a72167d0fe284a9dce0674",
+      "source": "https://download.qt.io/archive/qt/6.8/CVE-2026-100140-qt5compat-6.8.zip#CVE-2026-100140-qt5compat-6.8-0003.diff",
+      "archive": "CVE-2026-100140-qt5compat-6.8.zip",
+      "archive_sha256": "10b0563e379cedfd125719b727bad3a520ed08bf62993162dbce052201c2484a",
+      "upstream_date": "30-Oct-2026 13:48",
+      "added": "2026-10-31T10:59:26+00:00"
+    },
+    {
+      "file": "CVE-2026-100140-qt5compat-6.8-0004.diff",
+      "cve": "CVE-2026-100140",
+      "module": "qt5compat",
+      "sha256": "38d7fe5e02b81d0b8ffb8b64c688c6809c5d38b6ac36a40ec51ad5148389cb2b",
+      "source": "https://download.qt.io/archive/qt/6.8/CVE-2026-100140-qt5compat-6.8.zip#CVE-2026-100140-qt5compat-6.8-0004.diff",
+      "archive": "CVE-2026-100140-qt5compat-6.8.zip",
+      "archive_sha256": "10b0563e379cedfd125719b727bad3a520ed08bf62993162dbce052201c2484a",
+      "upstream_date": "30-Oct-2026 13:48",
+      "added": "2026-10-31T10:59:26+00:00"
+    },
+    {
+      "file": "CVE-2026-114366-qtwebsockets-6.8-0001.diff",
+      "cve": "CVE-2026-114366",
+      "module": "qtwebsockets",
+      "sha256": "1a1e7e2ae3bdd88cc06cea96b00e09f789529e2ca6cefe7ab643f8b7e1830d7f",
+      "source": "https://download.qt.io/archive/qt/6.8/CVE-2026-114366-qtwebsockets-6.8-0001.diff",
+      "upstream_date": "30-Oct-2026 13:48",
+      "added": "2026-10-31T10:59:26+00:00"
     }
   ]
 }
