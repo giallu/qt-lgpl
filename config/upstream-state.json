@@ -1,6 +1,6 @@
 {
   "_comment": "Maintained by .github/workflows/check-upstream.yml. Records what has already been seen on download.qt.io so only real changes are reported.",
-  "last_committed": "2026-10-27T10:43:06+00:00",
+  "last_committed": "2026-10-31T10:59:34+00:00",
   "known_lines": [
     "6.10",
     "6.11",
@@ -32,6 +32,44 @@
           "sha256": "c27d27b86aaf2cdab0c18d513fbb94a432e98782eddfc5f856387e4be68be50b",
           "upstream_date": "26-Oct-2026 11:25",
           "first_seen": "2026-10-27T10:42:52+00:00"
+        },
+        "CVE-2026-100140-qt5compat-6.12.zip": {
+          "kind": "patchset",
+          "module": "qt5compat",
+          "sha256": "bff25f2a369acc55e1a1ef8dd095e2765634144eceecaee1eb618d6740de04ce",
+          "upstream_date": "30-Oct-2026 13:48",
+          "members": [
+            "CVE-2026-100140-qt5compat-6.12-0001.diff",
+            "CVE-2026-100140-qt5compat-6.12-0002.diff",
+            "CVE-2026-100140-qt5compat-6.12-0003.diff",
+            "CVE-2026-100140-qt5compat-6.12-0004.diff"
+          ],
+          "first_seen": "2026-10-31T10:59:26+00:00"
+        },
+        "CVE-2026-110944-qthttpserver-6.12-0001.diff": {
+          "kind": "not-built",
+          "module": "qthttpserver",
+          "upstream_date": "30-Oct-2026 13:48",
+          "first_seen": "2026-10-31T10:59:26+00:00"
+        },
+        "CVE-2026-110944-qthttpserver-6.12-0002.diff": {
+          "kind": "not-built",
+          "module": "qthttpserver",
+          "upstream_date": "30-Oct-2026 13:48",
+          "first_seen": "2026-10-31T10:59:26+00:00"
+        },
+        "CVE-2026-111487-qt3d-6.12-0001.diff": {
+          "kind": "not-built",
+          "module": "qt3d",
+          "upstream_date": "30-Oct-2026 13:48",
+          "first_seen": "2026-10-31T10:59:26+00:00"
+        },
+        "CVE-2026-114366-qtwebsockets-6.12-0001.diff": {
+          "kind": "patch",
+          "module": "qtwebsockets",
+          "sha256": "6173acca03e3af90e98b0f34deaa707553cc852b208163f56663b06f7f5fa41b",
+          "upstream_date": "30-Oct-2026 13:48",
+          "first_seen": "2026-10-31T10:59:26+00:00"
         }
       }
     },
@@ -342,6 +380,32 @@
           "sha256": "9b0796ea1348a797c6965edb4c281b5f044bfb331fabfb79ec1490bfd37e7959",
           "upstream_date": "26-Oct-2026 11:26",
           "first_seen": "2026-10-27T10:42:52+00:00"
+        },
+        "CVE-2026-100140-qt5compat-6.8.zip": {
+          "kind": "patchset",
+          "module": "qt5compat",
+          "sha256": "10b0563e379cedfd125719b727bad3a520ed08bf62993162dbce052201c2484a",
+          "upstream_date": "30-Oct-2026 13:48",
+          "members": [
+            "CVE-2026-100140-qt5compat-6.8-0001.diff",
+            "CVE-2026-100140-qt5compat-6.8-0002.diff",
+            "CVE-2026-100140-qt5compat-6.8-0003.diff",
+            "CVE-2026-100140-qt5compat-6.8-0004.diff"
+          ],
+          "first_seen": "2026-10-31T10:59:26+00:00"
+        },
+        "CVE-2026-111487-qt3d-6.8-0001.diff": {
+          "kind": "not-built",
+          "module": "qt3d",
+          "upstream_date": "30-Oct-2026 13:48",
+          "first_seen": "2026-10-31T10:59:26+00:00"
+        },
+        "CVE-2026-114366-qtwebsockets-6.8-0001.diff": {
+          "kind": "patch",
+          "module": "qtwebsockets",
+          "sha256": "1a1e7e2ae3bdd88cc06cea96b00e09f789529e2ca6cefe7ab643f8b7e1830d7f",
+          "upstream_date": "30-Oct-2026 13:48",
+          "first_seen": "2026-10-31T10:59:26+00:00"
         }
       }
     }
