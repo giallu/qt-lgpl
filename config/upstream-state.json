@@ -1,6 +1,6 @@
 {
   "_comment": "Maintained by .github/workflows/check-upstream.yml. Records what has already been seen on download.qt.io so only real changes are reported.",
-  "last_committed": "2026-10-31T10:59:34+00:00",
+  "last_committed": "2026-11-02T13:40:30+00:00",
   "known_lines": [
     "6.10",
     "6.11",
@@ -406,6 +406,18 @@
           "sha256": "1a1e7e2ae3bdd88cc06cea96b00e09f789529e2ca6cefe7ab643f8b7e1830d7f",
           "upstream_date": "30-Oct-2026 13:48",
           "first_seen": "2026-10-31T10:59:26+00:00"
+        },
+        "CVE-2026-103653-qtcoap-6.8-0001.diff": {
+          "kind": "not-built",
+          "module": "qtcoap",
+          "upstream_date": "02-Nov-2026 11:29",
+          "first_seen": "2026-11-02T13:40:26+00:00"
+        },
+        "CVE-2026-103653-qtcoap-6.8-0002.diff": {
+          "kind": "not-built",
+          "module": "qtcoap",
+          "upstream_date": "02-Nov-2026 11:29",
+          "first_seen": "2026-11-02T13:40:26+00:00"
         }
       }
     }
