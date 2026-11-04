@@ -1,6 +1,6 @@
 {
   "_comment": "Maintained by .github/workflows/check-upstream.yml. Records what has already been seen on download.qt.io so only real changes are reported.",
-  "last_committed": "2026-11-02T13:40:30+00:00",
+  "last_committed": "2026-11-04T13:07:10+00:00",
   "known_lines": [
     "6.10",
     "6.11",
@@ -70,6 +70,13 @@
           "sha256": "6173acca03e3af90e98b0f34deaa707553cc852b208163f56663b06f7f5fa41b",
           "upstream_date": "30-Oct-2026 13:48",
           "first_seen": "2026-10-31T10:59:26+00:00"
+        },
+        "CVE-2026-107479-qt5compat-6.12.diff": {
+          "kind": "patch",
+          "module": "qt5compat",
+          "sha256": "426579a9c87a0e11d1b905dd12b3b8c0781a290d041555fd0f0a1c35a1505518",
+          "upstream_date": "03-Nov-2026 16:59",
+          "first_seen": "2026-11-04T13:07:05+00:00"
         }
       }
     },
@@ -418,6 +425,13 @@
           "module": "qtcoap",
           "upstream_date": "02-Nov-2026 11:29",
           "first_seen": "2026-11-02T13:40:26+00:00"
+        },
+        "CVE-2026-107479-qt5compat-6.8.diff": {
+          "kind": "patch",
+          "module": "qt5compat",
+          "sha256": "b7310da7e0ef87dd8f7b87f1fee3eb5f9167f0c0d615850ce581f9b272689266",
+          "upstream_date": "03-Nov-2026 16:59",
+          "first_seen": "2026-11-04T13:07:05+00:00"
         }
       }
     }
