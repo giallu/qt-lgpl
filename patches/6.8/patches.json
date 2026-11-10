@@ -488,6 +488,24 @@
       "source": "https://download.qt.io/archive/qt/6.8/CVE-2026-107590-qt5compat-6.8.diff",
       "upstream_date": "26-Oct-2026 11:26",
       "added": "2026-10-27T10:42:52+00:00"
+    },
+    {
+      "file": "CVE-2026-116337-qtbase-6.8-0001.diff",
+      "cve": "CVE-2026-116337",
+      "module": "qtbase",
+      "sha256": "aa7965835e416126e42f98e05c97780d2f1d1926b34c937c07d6f62826045b9b",
+      "source": "https://download.qt.io/archive/qt/6.8/CVE-2026-116337-qtbase-6.8-0001.diff",
+      "upstream_date": "09-Nov-2026 08:19",
+      "added": "2026-11-10T13:37:25+00:00"
+    },
+    {
+      "file": "CVE-2026-116337-qtbase-6.8-0002.diff",
+      "cve": "CVE-2026-116337",
+      "module": "qtbase",
+      "sha256": "f307349b325982cb068b45384b760e2e71a1a1789d4ef0b37d61eac39792f8be",
+      "source": "https://download.qt.io/archive/qt/6.8/CVE-2026-116337-qtbase-6.8-0002.diff",
+      "upstream_date": "09-Nov-2026 08:19",
+      "added": "2026-11-10T13:37:25+00:00"
     }
   ]
 }
