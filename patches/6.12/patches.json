@@ -34,6 +34,24 @@
       "source": "https://download.qt.io/official_releases/qt/6.12/CVE-2026-105924-qtbase-6.12.diff",
       "upstream_date": "26-Oct-2026 11:25",
       "added": "2026-10-27T10:42:52+00:00"
+    },
+    {
+      "file": "CVE-2026-116337-qtbase-6.12-0001.diff",
+      "cve": "CVE-2026-116337",
+      "module": "qtbase",
+      "sha256": "74c5028985dcc0455255909de4dc80f50cf5472dbf465ce46ebc791a7b080f12",
+      "source": "https://download.qt.io/official_releases/qt/6.12/CVE-2026-116337-qtbase-6.12-0001.diff",
+      "upstream_date": "09-Nov-2026 08:19",
+      "added": "2026-11-10T13:37:25+00:00"
+    },
+    {
+      "file": "CVE-2026-116337-qtbase-6.12-0002.diff",
+      "cve": "CVE-2026-116337",
+      "module": "qtbase",
+      "sha256": "83abc89d507dbd9a94dc5718b0125492c1c37b0609a8f404a1f164925940faec",
+      "source": "https://download.qt.io/official_releases/qt/6.12/CVE-2026-116337-qtbase-6.12-0002.diff",
+      "upstream_date": "09-Nov-2026 08:19",
+      "added": "2026-11-10T13:37:25+00:00"
     }
   ]
 }
