@@ -34,6 +34,39 @@
       "source": "https://download.qt.io/official_releases/qt/6.12/CVE-2026-105924-qtbase-6.12.diff",
       "upstream_date": "26-Oct-2026 11:25",
       "added": "2026-10-27T10:42:52+00:00"
+    },
+    {
+      "file": "CVE-2026-114369-qtwebsockets-6.12-0001.diff",
+      "cve": "CVE-2026-114369",
+      "module": "qtwebsockets",
+      "sha256": "085909ca87827a64865ea448471c40d3a0d3cdf78eb8130894588cd714c3d2ce",
+      "source": "https://download.qt.io/official_releases/qt/6.12/CVE-2026-114369-qtwebsockets-6.12.zip#CVE-2026-114369-qtwebsockets-6.12-0001.diff",
+      "archive": "CVE-2026-114369-qtwebsockets-6.12.zip",
+      "archive_sha256": "7faa9b02604615a8d5a5ab1cf9b910cdddf9e0eee436b395099ca28c65123df2",
+      "upstream_date": "12-Nov-2026 10:24",
+      "added": "2026-11-13T13:15:43+00:00"
+    },
+    {
+      "file": "CVE-2026-114369-qtwebsockets-6.12-0002.diff",
+      "cve": "CVE-2026-114369",
+      "module": "qtwebsockets",
+      "sha256": "e6078b2f90f0ddf9d880c69e654db575e9931c8fceb6176ffd1c12d51531a9f4",
+      "source": "https://download.qt.io/official_releases/qt/6.12/CVE-2026-114369-qtwebsockets-6.12.zip#CVE-2026-114369-qtwebsockets-6.12-0002.diff",
+      "archive": "CVE-2026-114369-qtwebsockets-6.12.zip",
+      "archive_sha256": "7faa9b02604615a8d5a5ab1cf9b910cdddf9e0eee436b395099ca28c65123df2",
+      "upstream_date": "12-Nov-2026 10:24",
+      "added": "2026-11-13T13:15:43+00:00"
+    },
+    {
+      "file": "CVE-2026-114369-qtwebsockets-6.12-0003.diff",
+      "cve": "CVE-2026-114369",
+      "module": "qtwebsockets",
+      "sha256": "79a4cb03c03a57257eec05a5dcf96d2ca02448601e45355ed8b0976625dc6954",
+      "source": "https://download.qt.io/official_releases/qt/6.12/CVE-2026-114369-qtwebsockets-6.12.zip#CVE-2026-114369-qtwebsockets-6.12-0003.diff",
+      "archive": "CVE-2026-114369-qtwebsockets-6.12.zip",
+      "archive_sha256": "7faa9b02604615a8d5a5ab1cf9b910cdddf9e0eee436b395099ca28c65123df2",
+      "upstream_date": "12-Nov-2026 10:24",
+      "added": "2026-11-13T13:15:43+00:00"
     }
   ]
 }
