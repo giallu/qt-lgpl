@@ -1,6 +1,6 @@
 {
   "_comment": "Maintained by .github/workflows/check-upstream.yml. Records what has already been seen on download.qt.io so only real changes are reported.",
-  "last_committed": "2026-11-13T13:15:56+00:00",
+  "last_committed": "2026-11-14T12:19:52+00:00",
   "known_lines": [
     "6.10",
     "6.11",
@@ -103,6 +103,26 @@
             "CVE-2026-114369-qtwebsockets-6.12-0003.diff"
           ],
           "first_seen": "2026-11-13T13:15:43+00:00"
+        },
+        "CVE-2026-105925-qt5compat-6.12.zip": {
+          "kind": "patchset",
+          "module": "qt5compat",
+          "sha256": "31fc3d890f01a327d74df8eb1b8063ab0c84679c6ae671c350129d795001651d",
+          "upstream_date": "13-Nov-2026 15:07",
+          "members": [
+            "CVE-2026-105925-qt5compat-6.12-0001.diff",
+            "CVE-2026-105925-qt5compat-6.12-0002.diff",
+            "CVE-2026-105925-qt5compat-6.12-0003.diff",
+            "CVE-2026-105925-qt5compat-6.12-0004.diff"
+          ],
+          "first_seen": "2026-11-14T12:19:46+00:00"
+        },
+        "CVE-2026-105943-qtbase-6.12.diff": {
+          "kind": "patch",
+          "module": "qtbase",
+          "sha256": "dd22629ce948cf0a900421323cca331907180242a9b51c3fd75b25c75f068099",
+          "upstream_date": "13-Nov-2026 15:07",
+          "first_seen": "2026-11-14T12:19:46+00:00"
         }
       }
     },
@@ -506,6 +526,26 @@
           "sha256": "ed841348a1bae36a7ddea53969ffd28737adcaeae5bc45aa250b9f4b4664bb0d",
           "upstream_date": "12-Nov-2026 17:31",
           "first_seen": "2026-11-13T13:15:43+00:00"
+        },
+        "CVE-2026-105925-qt5compat-6.8.zip": {
+          "kind": "patchset",
+          "module": "qt5compat",
+          "sha256": "4d71a02f685b7279c395867c963e2d8b522c6996d159f6cc26567a3af8f6f28f",
+          "upstream_date": "13-Nov-2026 15:07",
+          "members": [
+            "CVE-2026-105925-qt5compat-6.8-0001.diff",
+            "CVE-2026-105925-qt5compat-6.8-0002.diff",
+            "CVE-2026-105925-qt5compat-6.8-0003.diff",
+            "CVE-2026-105925-qt5compat-6.8-0004.diff"
+          ],
+          "first_seen": "2026-11-14T12:19:46+00:00"
+        },
+        "CVE-2026-105943-qtbase-6.8.diff": {
+          "kind": "patch",
+          "module": "qtbase",
+          "sha256": "d255a9141bbd2e3f5d6aea970841bc20bce9c4a2c61e15e73e2cf22de309dc85",
+          "upstream_date": "13-Nov-2026 15:07",
+          "first_seen": "2026-11-14T12:19:46+00:00"
         }
       }
     }
